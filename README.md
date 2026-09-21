@@ -112,14 +112,14 @@ INIT void init(void* _resolve_function(char* name))
 ```
 
 ## модули:
-- zhirGL - разработка ведется
-- windowmanager - разработка ведется
-- mouse-driver - ожидается доработка ядра
-- zhir-vm(jit vm для memorysafe языка) - разработка ведется
-- ide-driver, fat16 - ожидается доработка ядра
+- zhirGL - ожидается оконный менеджер
+- windowmanager - разработка ведется - https://github.com/TINERKOTL/zhiros-module-example
+- mouse-driver - готов - NEUROSLOP - https://github.com/ilizavr/mouse-module
+- zhir-vm(jit vm для memorysafe языка) - разработка ведется - https://github.com/bust6k/ZhirVM
+- ide-driver, fat16 - скоро
 - network - ожидается доработка ядра
 - unixbox(слой совместимости для unix-подобных программ) - в планах
-- elf module loader - решает проблемы raw модулей - в планах
+- elf module loader - решает проблемы raw модулей - скоро
 
 ## нейросети и вайбкодинг
 - в ядре не должно быть ни строчки кода написанного ИИ.
