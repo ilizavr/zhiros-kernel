@@ -36,7 +36,7 @@ void* resolve_function(char * function_name)
 		if(strcmp(current->name, function_name) == 0) return current->call;
 		current=current->next;
 	}
-	KLOGE("function %s not found!\n",function_name);
+	LOGE("function %s not found!\n",function_name);
 	return 0;
 }
 
@@ -58,9 +58,9 @@ void register_function(char *function_name, void* call, char *description)
 bool load_mod(char diskletter,char *name)
 {
 	struct file* mod = open(diskletter,name);
-	if(!mod){KLOGE("file %s not found",name);return false;}
+	if(!mod){LOGE("file %s not found",name);return false;}
 	u32 size = mod->getsize(mod);
-	if(!size){KLOGE("file %s empty",name);return false;}
+	if(!size){LOGE("file %s empty",name);return false;}
 	void *module = kalloc(size);
 	mod->read(mod,module,size,0);
 

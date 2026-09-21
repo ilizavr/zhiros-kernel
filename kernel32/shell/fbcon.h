@@ -15,18 +15,3 @@ extern void print_int(u32 num);
 extern API struct fb_info* fbcon_stop();
 
 
-#define KLOGI(...) do { \
-    print_color("[I] ", 0x00FF00); \
-    printf(__VA_ARGS__); \
-    putchar('\n');\
-} while(0)
-#define KLOGE(...) do { \
-    print_color("[E] ", 0xFF0000); \
-    printf(__VA_ARGS__); \
-    putchar('\n');\
-} while(0)
-#define KLOGW(...) do { \
-    print_color("[W] ", 0xAA00FF); \
-    printf(__VA_ARGS__); \
-    putchar('\n');\
-} while(0)

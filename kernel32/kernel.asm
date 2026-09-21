@@ -28,15 +28,11 @@ header_end:
 
 section .text
 global _start
-global _none_interrupt
-global _pic_interrupt_master
-global _pic_interrupt_slave
-global keyboard_isr_handler
-
+global _interrupt_array
 
 extern main
 extern pic_eoi
-extern keyboard_isr_handler_c
+extern interrupt_handler
 
 _start:
  cli
@@ -50,35 +46,30 @@ _start:
 .j: hlt
  jmp .j
 
-_pic_interrupt_master:
-    cli
-    push eax
-    mov al, 0x20
-    out 0x20, al
-    pop eax
-    iret
 
-
-_pic_interrupt_slave:
-    cli
-    push eax
-    mov al, 0x20
-    out 0xA0, al
-    out 0x20, al
-    pop eax
-    iret
-_none_interrupt:
-    iret
-
-keyboard_isr_handler:
-    cli
+%macro MAKE_INTERRUPT_ENTRY 1
+align 64
+.i%1:
     pusha
-    call keyboard_isr_handler_c
-    mov eax, 0x20
-    out 0x20, al
+    push %1
+    call interrupt_handler
+    add esp, 4
     popa
-    sti
     iret
+
+align 64
+    times 16 dd 0
+%endmacro
+
+
+align 64
+_interrupt_array:
+%assign i 0
+%rep 256
+    MAKE_INTERRUPT_ENTRY i
+%assign i i+1
+%endrep
+
 
 
 section .bss

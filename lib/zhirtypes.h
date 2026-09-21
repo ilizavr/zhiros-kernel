@@ -35,10 +35,23 @@ typedef unsigned int i_ptr;
 #define STI() asm volatile("sti")
 #define CLI() asm volatile("cli")
 
-#define cpu_exception(N) void IRQ##N(){kernel_panic(N);}
-#define cpu_exception_init(N) set_idt_gate(N,IRQ##N)
-
 #define OBJECT_STRING 0
+
+#define LOGI(...) do { \
+print_color("[I] ", 0x00FF00); \
+printf(__VA_ARGS__); \
+printf("\n");\
+} while(0)
+#define LOGE(...) do { \
+print_color("[E] ", 0xFF0000); \
+printf(__VA_ARGS__); \
+printf("\n");\
+} while(0)
+#define LOGW(...) do { \
+print_color("[W] ", 0xAA00FF); \
+printf(__VA_ARGS__); \
+printf("\n");\
+} while(0)
 
 
 PAK struct object
@@ -196,5 +209,10 @@ static inline u32 save_irq()
 static inline void restore_irq(u32 eflags)
 {
     asm volatile("push %0; popfl" : : "r"(eflags));
+}
+
+static void crashde()
+{
+    u32 test = 1/0;
 }
 #endif

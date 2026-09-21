@@ -20,8 +20,8 @@ bool right_shift_pressed = false;
 char kb_buffer[KB_BUF_SIZE];
 u32 kb_head = 0, kb_tail = 0;
 
-extern void keyboard_isr_handler();
-void keyboard_isr_handler_c()
+
+void keyboard_isr_handler()
 {
     u8 key = inb(0x60);
     if(key==0x2A)shift_pressed=true;
@@ -84,5 +84,5 @@ u32 gets(char *str, u32 maxlen)
 
 void init_keyboard()
 {
-    set_idt_gate(33, keyboard_isr_handler);
+    hook_interrupt(33, keyboard_isr_handler);
 }

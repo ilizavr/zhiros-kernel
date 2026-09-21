@@ -2,7 +2,7 @@
  * Copyright (c) 2026 ilizavr
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
-
+// only 32bit support
 
 #include "interrupt.h"
 #include "../lib/ports.h"
@@ -30,6 +30,12 @@ void pic_remap()
 	outb(0x21,0);
 	outb(0xA1,0);
 }
+void pic_eoi(u32 irq)
+{
+	if(irq>=8) outb(0xA0, 0x20);
+	outb(0x20, 0x20);
+}
+
 
 PAK struct idt_entry
 {
@@ -49,10 +55,6 @@ PAK struct idt_ptr
 struct idt_entry idt[256];
 struct idt_ptr idtp;
 
-extern void _none_interrupt();
-extern void _pic_interrupt_master();
-extern void _pic_interrupt_slave();
-
 
 void set_idt_gate(u8 num,void* fnc)
 {
@@ -64,90 +66,40 @@ void set_idt_gate(u8 num,void* fnc)
 	idt[num].flags = 0x8E;//ring0 32bit
 }
 
+extern struct
+{
+	char buffer[64];
+	void* hooks[16];
+} _interrupt_array[];
 
-cpu_exception(0)
-cpu_exception(1)
-cpu_exception(2)
-cpu_exception(3)
-cpu_exception(4)
-cpu_exception(5)
-cpu_exception(6)
-cpu_exception(7)
-cpu_exception(8)
-cpu_exception(9)
-cpu_exception(10)
-cpu_exception(11)
-cpu_exception(12)
-cpu_exception(13)
-cpu_exception(14)
-cpu_exception(15)
-cpu_exception(16)
-cpu_exception(17)
-cpu_exception(18)
-cpu_exception(19)
-cpu_exception(20)
-cpu_exception(21)
-cpu_exception(22)
-cpu_exception(23)
-cpu_exception(24)
-cpu_exception(25)
-cpu_exception(26)
-cpu_exception(27)
-cpu_exception(28)
-cpu_exception(29)
-cpu_exception(30)
-cpu_exception(31)
-cpu_exception(32)
+void interrupt_handler(u32 num)
+{
+	for(int i = 0;i<16;i++)
+		if(_interrupt_array[num].hooks[i])
+			CALL(_interrupt_array[num].hooks[i]);
+
+	if(num<32) kernel_panic(num);
+	else if(num<0x30) pic_eoi(num-0x20);
+}
 
 
-void init_idt()// ONLY32BIT
+bool hook_interrupt(u32 num, void* fnc)
+{
+	for(int i = 0;i<16;i++)
+		if(!_interrupt_array[num].hooks[i]){
+			_interrupt_array[num].hooks[i] = fnc;
+			return true;
+		}
+	return false;
+}
+
+void init_idt()
 {
 	idtp.limit = 256*sizeof(struct idt_entry)-1;
 	idtp.base_low = (u16)&idt;
 	idtp.base_high = (u32)&idt>>16;
-	
-	cpu_exception_init(0);
-	cpu_exception_init(1);
-	cpu_exception_init(2);
-	cpu_exception_init(3);
-	cpu_exception_init(4);
-	cpu_exception_init(5);
-	cpu_exception_init(6);
-	cpu_exception_init(7);
-	cpu_exception_init(8);
-	cpu_exception_init(9);
-	cpu_exception_init(10);
-	cpu_exception_init(11);
-	cpu_exception_init(12);
-	cpu_exception_init(13);
-	cpu_exception_init(14);
-	cpu_exception_init(15);
-	cpu_exception_init(16);
-	cpu_exception_init(17);
-	cpu_exception_init(18);
-	cpu_exception_init(19);
-	cpu_exception_init(20);
-	cpu_exception_init(21);
-	cpu_exception_init(22);
-	cpu_exception_init(23);
-	cpu_exception_init(24);
-	cpu_exception_init(25);
-	cpu_exception_init(26);
-	cpu_exception_init(27);
-	cpu_exception_init(28);
-	cpu_exception_init(29);
-	cpu_exception_init(30);
-	cpu_exception_init(31);
-	cpu_exception_init(32);
 
-	for(int i = 0x20;i<0x28;i++) set_idt_gate(i,_pic_interrupt_master);
-	for(int i = 0x28;i<0x30;i++) set_idt_gate(i,_pic_interrupt_slave);
-	for(int i = 0x30;i<256;i++) set_idt_gate(i,_none_interrupt);
+	for(int i = 0;i<256;i++) set_idt_gate(i,&_interrupt_array[i]);
 
 	asm volatile("lidt (%0)" : : "r" (&idtp));
-}
-
-void pic_eoi()
-{
-	outb(0x20,0x20);
 }
