@@ -9,10 +9,11 @@
 1. single address space
 2. безопасность на уровне компилятора(модуль zhir-vm). unix-совместимость через модуль unixbox(внутри unixbox используется MMU для изоляции)
 3. максимальная модульность. человек сам должен выбирать что ему есть, система без его участия не будет жиреть
-4. ядро может работать без модулей, предоставляя минималистичную консоль для отладки и тестирования модулей
-5. консоль не отдельная подсистема, а просто программа для вызова функций линкера
-6. кооперативный планировщик
-7. минимальные обновления ядра. только багофиксы и минимальные согласованные дополнения, не ломающие совместимость
+4. лаконичность и простота каждой подсистемы ядра
+5. ядро может работать без модулей, предоставляя минималистичную консоль для отладки и тестирования модулей
+6. консоль не отдельная подсистема, а просто программа для вызова функций линкера
+7. кооперативный планировщик
+8. минимальные обновления ядра. только багофиксы и минимальные согласованные дополнения, не ломающие совместимость
 
 ### причины такого подхода:
 1. модульная архитектура для масштабируемости системы
@@ -30,7 +31,7 @@
 5. минималистичная ФС ustar
 6. динамический линковщик модулей
 7. обработчик CPU exception. вывод паники с регистрами, стеком и консолью(частично готово)
-8. консоль отладки и минимальный набор утилит: disasm, ls, lsmod, load_module(не готово)
+8. консоль отладки и минимальный набор утилит: disasm, ls, lsmod, load_module(частично готово)
 9. планировщик(не готов)
 
 ## API ядра для модулей и консоли:
@@ -50,8 +51,9 @@ _getchar() -> char
 ### работа с памятью
 ```c
 _alloc(u32 size) -> void* buf
+_alloc_aligned(u32 size, u32 allign) -> void* buf // не реализовано
 _free(void* buf) -> bool success
-_getfree() -> i_ptr freemem
+_getfree() -> i_ptr freemem //не реализовано
 ```
 ### линковка модулей и ядра
 ```c
@@ -59,10 +61,10 @@ _resolve_function(char* name) -> void* function
 _register_function(char *function_name, void* call, char *description) -> None
 _remove_function(char *function_name) -> None //не реализовано
 _hook_function(char *function_name) -> None //хук функций для их кастомной реализации, не реализовано
-_hook_interrupt(u32 n, void* function) -> bool success //хук прерывания, для предотвращения конфликта, когда оба модуля нуждаются в вызове handlerа одного прерывания
+_hook_interrupt(u32 n, void* function) -> bool success //хук прерывания, для предотвращения конфликта модулей за прерывания
 _load_mod(char diskletter, char* path) -> bool success
 ```
-### таймер
+### таймер - не реализовано
 ```c
 _sleep_ms(u32 ms) -> None
 _getticks(u32 ms) -> u32 ticks
@@ -78,7 +80,7 @@ _mount(struct disk* dsk, void * open_fnc, void* mkdir_function) -> bool success
 _open(char diskletter, char* path) -> struct file*
 _mkdir(char diskletter, char* path) -> struct file*
 ```
-### многопоточность - не реализована
+### многопоточность - не реализовано
 ```c
 _yield() -> None
 _get_tasks() -> struct task** tasks
@@ -86,15 +88,46 @@ _create_task(struct task* task) -> None
 _hook_yield(void* new_yield) -> None //для смены алгоритма планирования
 ```
 
-СТРУКТУРЫ ЯДРА ОПИСАНЫ В ФАЙЛЕ `zhirtypes.h`. регистрация API-функций в `kernel.c`
+## Основные структуры ядра
+```c
+struct disk//эта же структура используется для разделов диска
+{
+    char *name;
+    u32 size;//in sectors
+
+    bool (*lba_read)(struct disk* dsk, u32 lba, char* buffer, u32 blocks);
+    bool (*lba_write)(struct disk* dsk, u32 lba, char* buffer, u32 blocks);
+
+    void* other_info;
+    void* fs_info;
+};
+
+struct file // это также директория
+{
+    struct disk* dsk;
+    char *path;
+    bool is_dir;
+
+    u32 (*read)(struct file* file, void* buffer, u32 size, u32 offset);// read от директории записывает массив struct file entries[n];
+    u32 (*write)(struct file* file, void* buffer, u32 size, u32 offset);
+    u32 (*getsize)(struct file* file); //размер файла
+
+    bool (*close)(struct file* file);
+
+    void* other_info;
+};
+```
+остальные описаны в `zhirtypes.h`
 
 ## linker
 linker хранит функции 2х типов - `fastcall`(имеют тип стандартный для C и префикс _) и `zhirfunction`(для терминала и jit)
 zhirfunction - это функция, которая принимает массив объектов(zhirobjectarray) и возвращает zhirobject(универсальный объект, который хранит свой тип в своей структуре)
 
+регистрация API-функций в `kernel.c`
+
 модули имеют формат raw bin. при запуске к ним в первом аргументе передается указатель на функцию резольвера символов(resolve_symbol)
 ### ВАЖНО: 
-модули компилируются с определенным набором флагов компиляции(смотрите пример компиляции в `build32.sh`). иногда бывают проблемы с массивами(добавляйте `static` при объявлении)
+модули компилируются с определенным набором флагов компиляции(смотрите пример компиляции в `build32.sh`). иногда бывают проблемы с массивами и функциями, которые вызываются из вне(добавляйте `static` при объявлении). желательно компилировать модули в elf формат, смотрите elf module loder
 
 ### пример кода модуля
 ```c
@@ -111,7 +144,7 @@ INIT void init(void* _resolve_function(char* name))
 }
 ```
 
-## модули:
+## набор модулей:
 - zhirGL - ожидается оконный менеджер
 - windowmanager - разработка ведется - https://github.com/TINERKOTL/zhiros-module-example
 - mouse-driver - готов - NEUROSLOP - https://github.com/ilizavr/mouse-module
@@ -125,3 +158,5 @@ INIT void init(void* _resolve_function(char* name))
 - в ядре не должно быть ни строчки кода написанного ИИ.
 - разработчикам модулей МОЖНО пользоваться нейросетями, но тогда модуль должен иметь пометку NEUROSLOP. 
 - написание тестов и review кода с помощью нейросетей РАЗРЕШЕНО
+
+<img width="1768" height="1286" alt="screen" src="https://github.com/user-attachments/assets/fe965596-a3c1-451b-b6fc-fabca75baf92" />
