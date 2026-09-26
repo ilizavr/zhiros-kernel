@@ -3,6 +3,10 @@
  * SPDX-License-Identifier: MIT
  */
 
+#include <limits.h>
+#include <stddef.h>
+#include <stdbool.h>
+
 #ifndef STRING
 #define STRING
 
@@ -105,4 +109,133 @@ static char *strncat(char *dest, const char *src, size_t n)
 
     return dest;
 }
+
+static bool is_delimiter(char c, const char *delim) {
+    while (*delim != '\0') {
+        if (c == *delim) {
+            return true;
+        }
+        delim++;
+    }
+    return false;
+}
+
+static char *strtok(char *str, const char *delim) {
+    static char *next_token = NULL;
+
+    if (str != NULL) {
+        next_token = str;
+    }
+
+    if (next_token == NULL) {
+        return NULL;
+    }
+
+    while (*next_token != '\0' && is_delimiter(*next_token, delim)) {
+        next_token++;
+    }
+
+    if (*next_token == '\0') {
+        next_token = NULL;
+        return NULL;
+    }
+
+    char *token_start = next_token;
+
+    while (*next_token != '\0' && !is_delimiter(*next_token, delim)) {
+        next_token++;
+    }
+
+    if (*next_token != '\0') {
+        *next_token = '\0';
+        next_token++;
+    } else {
+        next_token = NULL;
+    }
+
+    return token_start;
+}
+
+static inline bool is_space(char c) {
+    return c == ' ' || c == '\t' || c == '\n' || c == '\r' || c == '\f' || c == '\v';
+}
+
+static inline int char_to_val(char c) {
+    if (c >= '0' && c <= '9') return c - '0';
+    if (c >= 'a' && c <= 'z') return c - 'a' + 10;
+    if (c >= 'A' && c <= 'Z') return c - 'A' + 10;
+    return -1;
+}
+
+static long strtol(const char *nptr, char **endptr, int base) {
+    const char *s = nptr;
+    unsigned long acc = 0;
+    bool neg = false;
+    bool any = false;
+    bool overflow = false;
+
+    if (base < 0 || base == 1 || base > 36) {
+        if (endptr) *endptr = (char *)nptr;
+        return 0;
+    }
+
+    while (is_space(*s)) {
+        s++;
+    }
+
+    if (*s == '-') {
+        neg = true;
+        s++;
+    } else if (*s == '+') {
+        s++;
+    }
+
+    if ((base == 0 || base == 16) && s[0] == '0' && (s[1] == 'x' || s[1] == 'X')) {
+        char_to_val(s[2]);
+        if (char_to_val(s[2]) >= 0 && char_to_val(s[2]) < 16) {
+            s += 2;
+            base = 16;
+        }
+    }
+
+    if (base == 0) {
+        if (*s == '0') {
+            base = 8;
+        } else {
+            base = 10;
+        }
+    }
+
+    unsigned long limit = neg ? ((unsigned long)-(LONG_MIN + 1) + 1) : LONG_MAX;
+    unsigned long cutoff = limit / base;
+    int cutlim = limit % base;
+
+    int val;
+    while ((val = char_to_val(*s)) >= 0 && val < base) {
+        any = true;
+        if (overflow) {
+            s++;
+            continue;
+        }
+
+        if (acc > cutoff || (acc == cutoff && val > cutlim)) {
+            overflow = true;
+        } else {
+            acc = acc * base + val;
+        }
+        s++;
+    }
+
+    if (endptr) {
+        *endptr = (char *)(any ? s : nptr);
+    }
+
+    if (overflow) {
+        return neg ? LONG_MIN : LONG_MAX;
+    }
+
+    return neg ? -(long)acc : (long)acc;
+}
+
+
 #endif

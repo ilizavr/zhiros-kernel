@@ -65,6 +65,7 @@ u32 gets(char *str, u32 maxlen)
         char chr = getchar();
 
         if(chr == '\n') {
+            putchar(chr);
             break;
         }
         if(chr == '\b')

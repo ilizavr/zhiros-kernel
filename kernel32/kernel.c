@@ -13,7 +13,7 @@
 #include "linker.h"
 #include "shell/keyboard.h"
 #include "vfs.h"
-#include "../lib/hexdump.h"
+#include "shell/shell.h"
 
 void main(i_ptr addr, u32 magic)
 {
@@ -100,6 +100,8 @@ void main(i_ptr addr, u32 magic)
     register_function("_mkdir",open,"_mkdir(char diskletter, char* path) -> struct file*");
     register_function("_load_mod",load_mod,"_load_mod(char diskletter, char* path) -> bool success");
     LOGI("kernel api registred");
+
+    register_function("help",help,"");
 
     char ramdisk_letter = mount(ramdisk,open_unstar,0);
     LOGI("ramdisk letter: %c",ramdisk_letter);

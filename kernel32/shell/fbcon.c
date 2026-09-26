@@ -45,13 +45,10 @@ INLINE void put_sym_nobg(u8 sym, u32 startx, u32 starty, u32 color)
     for (int y = 0; y < 8; y++)
     {
         u8 font_row = font6x8[sym * 8 + y];
-        for (int x = 0; x < 6; x++)
+        for (int x = 6; x >= 0; x--)
         {
-            if (font_row & 0b10000000)
-            {
-                put_pixel(startx + x, starty + y, color);
-            }
-            font_row <<= 1;
+            put_pixel(startx + x, starty + y, (font_row&1)*color);
+            font_row >>= 1;
         }
     }
 }

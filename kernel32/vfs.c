@@ -37,6 +37,8 @@ char mount(struct disk* dsk, void * open_fnc, void * mkdir_fnc)
 
 struct file* open(char disk_letter,char *path)
 {
+    if(disk_letter>='a'&&disk_letter<='z') disk_letter = disk_letter-'a'+'A';
+
     if(disk_letter<'A'||disk_letter>=current_letter_disk) return 0;
     if(!mounts[disk_letter-'A'].open) return 0;
     return mounts[disk_letter-'A'].open(mounts[disk_letter-'A'].dsk,path);
@@ -44,6 +46,8 @@ struct file* open(char disk_letter,char *path)
 
 struct file* mkdir(char disk_letter,char *path)
 {
+    if(disk_letter>='a'&&disk_letter<='z') disk_letter = disk_letter-'a'+'A';
+
     if(disk_letter<'A'||disk_letter>=current_letter_disk) return 0;
     if(!mounts[disk_letter-'A'].mkdir) return 0;
     return mounts[disk_letter-'A'].mkdir(mounts[disk_letter-'A'].dsk,path);

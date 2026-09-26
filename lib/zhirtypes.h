@@ -1,5 +1,6 @@
 #include <stddef.h>
 #include <stdint.h>
+#include <stdbool.h>
 #ifndef ZHIRTYPES
 #define ZHIRTYPES
 
@@ -21,7 +22,6 @@ typedef signed long long s64;
 
 typedef unsigned int i_ptr;
 
-#define bool char
 #define false 0
 #define true 1
 
@@ -88,18 +88,17 @@ struct disk//эта же структура используется для ра
     void* fs_info;
 };
 
-struct file//это также директории
+struct file // это также директория
 {
     struct disk* dsk;
-
     char *path;
+    bool is_dir;
 
-    u32 (*read)(struct file* file, void* buffer, u32 size, u32 offset);//read от директории читает имена файлов, разделенных нуль байтами(директории в таком списке имеют / в начале имени, чтобы их отличать от файлов)
+    u32 (*read)(struct file* file, void* buffer, u32 size, u32 offset);// read от директории записывает массив struct file entries[n];
     u32 (*write)(struct file* file, void* buffer, u32 size, u32 offset);
     u32 (*getsize)(struct file* file); //размер файла
-    bool (*close)(struct file* file);
 
-    bool is_dir;
+    bool (*close)(struct file* file);
 
     void* other_info;
 };

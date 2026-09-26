@@ -8,7 +8,6 @@
 #include "shell/fbcon.h"
 #include "allocator.h"
 #include "vfs.h"
-#include "../lib/hexdump.h"
 
 PAK struct function_info
 {
@@ -20,7 +19,7 @@ PAK struct function_info
 
 volatile struct function_info *head_fnc = 0;
 
-char *strdup(char *str)
+static char *strdup(char *str)
 {
 	u32 len = strlen(str);
 	char * newstr = kalloc(len+1);
@@ -36,7 +35,6 @@ void* resolve_function(char * function_name)
 		if(strcmp(current->name, function_name) == 0) return current->call;
 		current=current->next;
 	}
-	LOGE("function %s not found!\n",function_name);
 	return 0;
 }
 
@@ -64,6 +62,20 @@ bool load_mod(char diskletter,char *name)
 	void *module = kalloc(size);
 	mod->read(mod,module,size,0);
 
-	//hexdump(module,512);
 	CALL(module,resolve_function);
+}
+
+void help()
+{
+	struct function_info * current = head_fnc;
+	while(current)
+	{
+		if(current->name[0] == '_') print_color(current->name,0x88FF55);
+		else print_color(current->name,0xFFFFFF);
+		for(int i = strlen(current->name);i<32;i++)putchar(' ');
+		print_color(current->description,0x00FFFF);
+		putchar('\n');
+
+		current=current->next;
+	}
 }
