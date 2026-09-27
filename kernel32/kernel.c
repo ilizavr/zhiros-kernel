@@ -95,13 +95,14 @@ void main(i_ptr addr, u32 magic)
     register_function("_diskadd",diskadd,"_diskadd(struct disk* dsk) -> bool success");
     register_function("_getdisk",getdisk,"_getdisk(int idx) -> struct disk*");
     register_function("_fbcon_stop",fbcon_stop,"_fbcon_stop() -> struct fb_info*");
+    register_function("_getfb",getfb,"_getfb() -> struct fb_info*");
     register_function("_mount",mount,"_mount(struct disk* dsk, void * open_fnc, void* mkdir_fnc) -> char diskletter");
     register_function("_open",open,"_open(char diskletter, char* path) -> struct file*");
     register_function("_mkdir",open,"_mkdir(char diskletter, char* path) -> struct file*");
     register_function("_load_mod",load_mod,"_load_mod(char diskletter, char* path) -> bool success");
+    register_function("_get_linker_head",get_linker_head,"_get_linker_head() -> struct function_info*");
+    register_function("_get_module_array",get_module_array,"_get_module_array() -> struct module_info*");
     LOGI("kernel api registred");
-
-    register_function("help",help,"");
 
     char ramdisk_letter = mount(ramdisk,open_unstar,0);
     LOGI("ramdisk letter: %c",ramdisk_letter);

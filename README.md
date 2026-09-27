@@ -41,6 +41,7 @@ _print_color(char *string, u32 color) -> None
 _printf(...) -> None
 _clearframe() -> None
 _fbcon_stop() -> fb_info* fb //отключается базовый графический драйвер для замены на кастомный
+_getfb() -> fb_info* fb //получить fbinfo без отключения графического драйвера
 ```
 ### клавиатура
 ```c
@@ -57,6 +58,8 @@ _getfree() -> i_ptr freemem //не реализовано
 ```
 ### линковка модулей и ядра
 ```c
+_get_linker_head() -> struct function_info *  //получить связный список функций линкера
+_get_module_array() -> struct module_info *  //получить массив модулей
 _resolve_function(char* name) -> void* function
 _register_function(char *function_name, void* call, char *description) -> None
 _remove_function(char *function_name) -> None //не реализовано
@@ -120,10 +123,9 @@ struct file // это также директория
 остальные описаны в `zhirtypes.h`
 
 ## linker
-linker хранит функции 2х типов - `fastcall`(имеют тип стандартный для C и префикс _) и `zhirfunction`(для терминала и jit)
-zhirfunction - это функция, которая принимает массив объектов(zhirobjectarray) и возвращает zhirobject(универсальный объект, который хранит свой тип в своей структуре)
-
 регистрация API-функций в `kernel.c`
+
+регистрация шелл функций в `shell/shell.c`
 
 модули имеют формат raw bin. при запуске к ним в первом аргументе передается указатель на функцию резольвера символов(resolve_symbol)
 ### ВАЖНО: 

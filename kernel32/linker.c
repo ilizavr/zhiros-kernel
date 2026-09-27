@@ -9,15 +9,9 @@
 #include "allocator.h"
 #include "vfs.h"
 
-PAK struct function_info
-{
-	void* call;
-	char * name;
-	char * description;
-	struct function_info* next;
-};
-
 volatile struct function_info *head_fnc = 0;
+volatile struct module_info modulelist[256] = {0};
+volatile u32 curmod = 0;
 
 static char *strdup(char *str)
 {
@@ -62,20 +56,20 @@ bool load_mod(char diskletter,char *name)
 	void *module = kalloc(size);
 	mod->read(mod,module,size,0);
 
+	modulelist[curmod].path = strdup(name);
+	modulelist[curmod].start = module;
+	modulelist[curmod].size = size;
+	curmod++;
+
 	CALL(module,resolve_function);
 }
 
-void help()
+struct function_info *get_linker_head()
 {
-	struct function_info * current = head_fnc;
-	while(current)
-	{
-		if(current->name[0] == '_') print_color(current->name,0x88FF55);
-		else print_color(current->name,0xFFFFFF);
-		for(int i = strlen(current->name);i<32;i++)putchar(' ');
-		print_color(current->description,0x00FFFF);
-		putchar('\n');
+	return head_fnc;
+}
 
-		current=current->next;
-	}
+struct module_info *get_module_array()
+{
+	return modulelist;
 }

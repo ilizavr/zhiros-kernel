@@ -56,8 +56,8 @@ INLINE void put_sym_nobg(u8 sym, u32 startx, u32 starty, u32 color)
 void init_fbcon(i_ptr _fb_addr, u32 _screen_width, u32 _screen_height, u32 _screen_pitch, u32 _bbp)
 {
     fb_addr = _fb_addr;
-    screen_width = _screen_width/6*6;
-    screen_height = _screen_height/8*8;
+    screen_width = _screen_width/7*7;
+    screen_height = _screen_height/9*9;
     screen_pitch = _screen_pitch;
     bpp = _bbp / 8;
 
@@ -88,25 +88,25 @@ void putchar_color(char chr, u32 color)
     if(stopcon) return;
     if(chr == '\n' || (curx+6)>screen_width)
     {
-        cury+=8;
+        cury+=9;
         curx=0;
 
-        if((cury+8)>screen_height) {
+        if((cury+9)>screen_height) {
             roll_screen();
-            cury = screen_height-8;
+            cury = screen_height-9;
         }
         if(chr == '\n')return;
     }
     if(chr == '\b')
     {
-        if(curx>=6)curx-=6;
-        else if(cury>=8){curx=screen_width-6;cury-=8;}
+        if(curx>=7)curx-=7;
+        else if(cury>=9){curx=screen_width-7;cury-=9;}
         return;
     }
 
 
     put_sym_nobg(chr,curx,cury,color);
-    curx+=6;
+    curx+=7;
 }
 
 void putchar(char chr)
@@ -165,14 +165,24 @@ void fbcon_resume()
 {
     stopcon = false;
 }
-struct fb_info* fbcon_stop()
+
+struct fb_info* getfb()
 {
-    stopcon = true;
     struct fb_info *ret = kalloc(sizeof(struct fb_info));
     ret->fb_addr = fb_addr;
     ret->screen_width = screen_width;
     ret->screen_height = screen_height;
     ret->screen_pitch = screen_pitch;
     ret->bpp = bpp;
+    ret->curx = curx;
+    ret->cury = cury;
     return ret;
 }
+struct fb_info* fbcon_stop()
+{
+    stopcon = true;
+
+    return getfb();
+}
+
+

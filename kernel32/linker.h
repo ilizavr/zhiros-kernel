@@ -8,4 +8,5 @@
 extern API void* resolve_function(char * function_name);
 extern API void register_function(char *function_name, void* call, char *description);
 extern API bool load_mod(char diskletter,char *name);
-extern API void help();
+extern API struct function_info * get_linker_head();
+extern API struct module_info *get_module_array();

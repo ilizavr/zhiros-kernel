@@ -67,6 +67,20 @@ PAK struct objectArray
     struct object objs[0];
 };
 
+struct function_info
+{
+    void* call;
+    char * name;
+    char * description;
+    struct function_info* next;
+};
+struct module_info
+{
+    char *path;
+    void *start;
+    u32 size;
+};
+
 struct fb_info
 {
     i_ptr fb_addr;
@@ -74,6 +88,9 @@ struct fb_info
     u32 screen_height;
     u32 bpp;
     u32 screen_pitch;
+
+    u32 curx;
+    u32 cury;
 };
 
 struct disk//эта же структура используется для разделов диска

@@ -13,5 +13,5 @@ extern void print(char *str);
 extern void print_hex(u32 num);
 extern void print_int(u32 num);
 extern API struct fb_info* fbcon_stop();
-
+extern API struct fb_info* getfb();
 
