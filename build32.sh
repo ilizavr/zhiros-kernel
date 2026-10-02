@@ -21,8 +21,9 @@ gcc $FLAGS -c kernel32/linker.c -o build/linker.o
 gcc $FLAGS -c kernel32/vfs.c -o build/vfs.o
 gcc $FLAGS -c kernel32/shell/keyboard.c -o build/keyboard.o
 gcc $FLAGS -c kernel32/shell/shell.c -o build/shell.o
+gcc $FLAGS -c kernel32/timer.c -o build/timer.o
 nasm -f elf32 kernel32/kernel.asm -o build/kernel_asm.o
-ld -m elf_i386 -T kernel32/linker.ld -o iso/boot/kernel.bin build/kernel_asm.o build/kernel_c.o build/printf.o build/allocator.o build/fbcon.o build/disk.o build/panic.o build/interrupt.o build/linker.o build/keyboard.o build/vfs.o build/shell.o
+ld -m elf_i386 -T kernel32/linker.ld -o iso/boot/kernel.bin build/kernel_asm.o build/kernel_c.o build/printf.o build/allocator.o build/fbcon.o build/disk.o build/panic.o build/interrupt.o build/linker.o build/keyboard.o build/vfs.o build/shell.o build/timer.o
 
 
 #compile modules
