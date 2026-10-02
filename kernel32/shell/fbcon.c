@@ -62,10 +62,10 @@ void init_fbcon(i_ptr _fb_addr, u32 _screen_width, u32 _screen_height, u32 _scre
     bpp = _bbp / 8;
 
     fb_size = screen_pitch*screen_height;
-    fb_size_withoutlastline = (screen_height-8)*screen_pitch;
-    fb_lastline_addr = fb_addr+(screen_height-8)*screen_pitch;
-    fb_onelinesize = screen_pitch*8;
-    fb_secondline_addr = fb_addr+screen_pitch*8;
+    fb_size_withoutlastline = (screen_height-9)*screen_pitch;
+    fb_lastline_addr = fb_addr+(screen_height-9)*screen_pitch;
+    fb_onelinesize = screen_pitch*9;
+    fb_secondline_addr = fb_addr+screen_pitch*9;
 }
 
 u32 curx=0, cury=0;

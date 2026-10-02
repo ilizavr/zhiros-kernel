@@ -73,3 +73,18 @@ struct module_info *get_module_array()
 {
 	return modulelist;
 }
+
+bool replace_function(char* function_name, void* newfnc)
+{
+	u32 eflags = save_irq();
+
+	u8* oldfnc = (u8*)resolve_function(function_name);
+	if (!oldfnc || !newfnc) {restore_irq(eflags); return false;}
+
+	i_ptr offset = (i_ptr)newfnc - ((i_ptr)oldfnc + 5);
+	*(i_ptr*)(oldfnc + 1) = offset;
+	*oldfnc = 0xE9;//JMP
+
+	restore_irq(eflags);
+	return true;
+}

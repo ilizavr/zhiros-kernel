@@ -18,53 +18,69 @@ static char *strdup(char *str)
     return newstr;
 }
 
-void printlinkerlist()
+void* printlinkerlist()
 {
     struct function_info * current = get_linker_head();
     while(current)
     {
-        if(current->name[0] == '_') print_color(current->name,0x88FF55);
-        else print_color(current->name,0xFFFFFF);
+        if(current->name[0] == '_') {current=current->next; continue;}
+        print_color(current->name,0xAAAAFF);
         for(int i = strlen(current->name);i<32;i++)putchar(' ');
         print_color(current->description,0x00FFFF);
         putchar('\n');
 
         current=current->next;
     }
+    putchar('\n');
+
+    current = get_linker_head();
+    while(current)
+    {
+        if(current->name[0] != '_') {current=current->next; continue;}
+        print_color(current->name,0x00FFAA);
+        for(int i = strlen(current->name);i<32;i++)putchar(' ');
+        print_color(current->description,0x00FFFF);
+        putchar('\n');
+
+        current=current->next;
+    }
+    return 0;
 }
 
-void dumpmem(char* type, void* addr, i_ptr size)
+void dumpmem(void* addr, i_ptr size)
 {
-    if(!strcmp(type,"hd")||!strcmp(type,"hexdump"))
+    if(size>65536)
     {
-        hexdump(addr,size);
+        LOGW("memory block is big. continue?");
+        char chr = getchar();
+        if(chr!='y') return;
     }
-    if(!strcmp(type,"file"))
-    {
-        struct file* fi = addr;
-        printf("is_dir = %u\nread = %x\nwrite = %x\ngetsize = %x\nclose = %x",fi->is_dir, fi->read,fi->write,fi->getsize,fi->close);
-    }
-    if(!strcmp(type,"help"))
-    {
-        printf("use _mem type i:<addr> [i:size]\n");
-        printf("types:\nhd - hexdump\nfile - file struct dump");
-    }
+    hexdump(addr,size);
 }
 
-void lsmod()
+void* cls()
+{
+    clearframe();
+    return 0;
+}
+
+void* lsmod()
 {
     struct module_info * mdls = get_module_array();
-    for(int i = 0; i< 256;i++) if(mdls[i].start) printf("%s | %x-%x",mdls[i].path, mdls[i].start,mdls[i].start+mdls[i].size);
+    for(int i = 0; i< 256;i++) if(mdls[i].start) printf("%s | %x-%x\n",mdls[i].path, mdls[i].start,mdls[i].start+mdls[i].size);
+
+    return 0;
 }
 
 void start_shell()
 {
-    register_function("_fncs",printlinkerlist,"print linker list");
-    register_function("_mem",dumpmem,"use _mem help");
-    register_function("_lsmod",lsmod,"");
+    register_function("help",printlinkerlist,"print all functions in linker list");
+    register_function("lsmod",lsmod,"print all loaded modules");
+    register_function("cls",cls,"clear screen");
+    register_function("_dmp",dumpmem,"dump ram. _dmp i:0xaddr i:size");
 
 
-    printf("shell started\ntype _fncs to get all linker funtion\n");
+    printf("shell started\ntype _help to get all linker funtion\n");
     printf("  use _function type:arg1 type:arg2\n");
     printf("  if arg is string _function stringarg\n");
     printf("  use *0xaddr to call function by address\n");
@@ -110,6 +126,7 @@ void start_shell()
                 LOGE("function %s not found!",token);
                 continue;
             }
+            bool is_fastcall = (token[0] == '_');
 
             token = strtok(0,d);
 
@@ -124,7 +141,7 @@ void start_shell()
             }
 
             i_ptr ret = _function(args[0],args[1],args[2],args[3]);
-            printf("\nreturn %x\n",ret);
+            if(is_fastcall)printf("\nreturn %x\n",ret);
         }
     }
 }

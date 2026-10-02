@@ -111,7 +111,7 @@ struct file // это также директория
     char *path;
     bool is_dir;
 
-    u32 (*read)(struct file* file, void* buffer, u32 size, u32 offset);// read от директории записывает массив struct file entries[n];
+    u32 (*read)(struct file* file, void* buffer, u32 size, u32 offset);// read от директории читает имяфайла\nимя2файла и тд. крч read от директории выглядит как ls
     u32 (*write)(struct file* file, void* buffer, u32 size, u32 offset);
     u32 (*getsize)(struct file* file); //размер файла
 

@@ -14,6 +14,7 @@
 #include "shell/keyboard.h"
 #include "vfs.h"
 #include "shell/shell.h"
+#include "timer.h"
 
 void main(i_ptr addr, u32 magic)
 {
@@ -79,10 +80,13 @@ void main(i_ptr addr, u32 magic)
 
     init_keyboard();
     LOGI("keyboard inited");
+    init_timer();
+    LOGI("timer inited");
 
     //fastcall api
     register_function("_resolve_function",resolve_function,"_resolve_function(char* name) -> void* function");
     register_function("_register_function",register_function,"_register_function(char *function_name, void* call, char *description) -> None");
+    register_function("_replace_function",replace_function,"_replace_function(char *function_name, void* newfnc) -> bool success");
     register_function("_printf",printf,"_printf(...) -> None");
     register_function("_clearframe",clearframe,"_clearframe() -> None");
     register_function("_gets",gets,"_gets(char* string, u32 max_size) -> u32 readed");
@@ -91,6 +95,7 @@ void main(i_ptr addr, u32 magic)
     register_function("_print_color",print_color,"_print_color(char *string, u32 color) -> None");
     register_function("_alloc",kalloc,"_alloc(u32 size) -> void* buf");
     register_function("_free",free,"_free(void* buf) -> bool success");
+    register_function("_getfree",get_available_memory,"_getfree() -> i_ptr freemem");
     register_function("_hook_interrupt",hook_interrupt,"_hook_interrupt(u32 n, void* function) -> bool success");
     register_function("_diskadd",diskadd,"_diskadd(struct disk* dsk) -> bool success");
     register_function("_getdisk",getdisk,"_getdisk(int idx) -> struct disk*");
@@ -102,6 +107,8 @@ void main(i_ptr addr, u32 magic)
     register_function("_load_mod",load_mod,"_load_mod(char diskletter, char* path) -> bool success");
     register_function("_get_linker_head",get_linker_head,"_get_linker_head() -> struct function_info*");
     register_function("_get_module_array",get_module_array,"_get_module_array() -> struct module_info*");
+    register_function("_sleep_ms",sleep_ms,"_sleep_ms(u32 ms) -> None");
+    register_function("_getticks",getticks,"_getticks() -> u32 ticks");
     LOGI("kernel api registred");
 
     char ramdisk_letter = mount(ramdisk,open_unstar,0);

@@ -24,7 +24,7 @@ PAK struct memoryblock
 
 struct memoryblock headblock = {0,1,0,0};
 struct memoryblock *footblock = &headblock;
-i_ptr available_memory = 0;
+
 
 void *kalloc(u32 size)
 {
@@ -54,12 +54,11 @@ void *kalloc(u32 size)
         current = current->next;
     }
 
-    kernel_panic_text("memory not found");
-
     restore_irq(eflags);
     return 0;
 
 }
+
 
 bool free(void *addr)
 {
@@ -112,8 +111,6 @@ void _allocator_add_page(i_ptr start, i_ptr end)
     footblock->next->next = 0;
 
     footblock = footblock->next;
-
-    available_memory+=size;
 }
 
 void allocator_add_page(i_ptr start, i_ptr end, i_ptr modulestart, i_ptr moduleend)
@@ -145,5 +142,16 @@ void allocator_add_page(i_ptr start, i_ptr end, i_ptr modulestart, i_ptr modulee
 
 i_ptr get_available_memory()
 {
+    i_ptr available_memory = 0;
+    u32 eflags = save_irq();
+    struct memoryblock *current = headblock.next;
+
+    while(current)
+    {
+        available_memory += current->size;
+        current = current->next;
+    }
+
+    restore_irq(eflags);
     return available_memory;
 }

@@ -41,7 +41,7 @@ _print_color(char *string, u32 color) -> None
 _printf(...) -> None
 _clearframe() -> None
 _fbcon_stop() -> fb_info* fb //отключается базовый графический драйвер для замены на кастомный
-_getfb() -> fb_info* fb //получить fbinfo без отключения графического драйвера
+_getfb() -> fb_info* fb //получить fbinfo без отключения текстового графического драйвера
 ```
 ### клавиатура
 ```c
@@ -54,7 +54,7 @@ _getchar() -> char
 _alloc(u32 size) -> void* buf
 _alloc_aligned(u32 size, u32 allign) -> void* buf // не реализовано
 _free(void* buf) -> bool success
-_getfree() -> i_ptr freemem //не реализовано
+_getfree() -> i_ptr freemem
 ```
 ### линковка модулей и ядра
 ```c
@@ -62,12 +62,11 @@ _get_linker_head() -> struct function_info *  //получить связный 
 _get_module_array() -> struct module_info *  //получить массив модулей
 _resolve_function(char* name) -> void* function
 _register_function(char *function_name, void* call, char *description) -> None
-_remove_function(char *function_name) -> None //не реализовано
-_hook_function(char *function_name) -> None //хук функций для их кастомной реализации, не реализовано
+_replace_function(char *function_name, void* newfnc) -> bool success //переопределение функций в линкере
 _hook_interrupt(u32 n, void* function) -> bool success //хук прерывания, для предотвращения конфликта модулей за прерывания
 _load_mod(char diskletter, char* path) -> bool success
 ```
-### таймер - не реализовано
+### таймер
 ```c
 _sleep_ms(u32 ms) -> None
 _getticks(u32 ms) -> u32 ticks
@@ -87,8 +86,7 @@ _mkdir(char diskletter, char* path) -> struct file*
 ```c
 _yield() -> None
 _get_tasks() -> struct task** tasks
-_create_task(struct task* task) -> None
-_hook_yield(void* new_yield) -> None //для смены алгоритма планирования
+_create_task(void* function) -> None
 ```
 
 ## Основные структуры ядра
@@ -111,7 +109,7 @@ struct file // это также директория
     char *path;
     bool is_dir;
 
-    u32 (*read)(struct file* file, void* buffer, u32 size, u32 offset);// read от директории записывает массив struct file entries[n];
+    u32 (*read)(struct file* file, void* buffer, u32 size, u32 offset);// read от директории читает имяфайла\nимя2файла и тд. крч read от директории выглядит как ls
     u32 (*write)(struct file* file, void* buffer, u32 size, u32 offset);
     u32 (*getsize)(struct file* file); //размер файла
 
@@ -123,6 +121,9 @@ struct file // это также директория
 остальные описаны в `zhirtypes.h`
 
 ## linker
+linker хранит функции 2х типов - `fastcall`(имеют тип стандартный для C и префикс _ и не безопасны) и `zhirfunction`(для zhirvm безопасные)
+zhirfunction - это функция, которая принимает массив объектов(zhirobjectarray) и возвращает zhirobject(универсальный объект, который хранит свой тип в своей структуре)
+
 регистрация API-функций в `kernel.c`
 
 регистрация шелл функций в `shell/shell.c`
