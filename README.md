@@ -162,5 +162,4 @@ INIT void init(void* _resolve_function(char* name))
 - разработчикам модулей МОЖНО пользоваться нейросетями, но тогда модуль должен иметь пометку NEUROSLOP. 
 - написание тестов и review кода с помощью нейросетей РАЗРЕШЕНО
 
-<img width="1768" height="1286" alt="screen" src="https://github.com/user-attachments/assets/fe965596-a3c1-451b-b6fc-fabca75baf92" />
-<img width="1280" height="923" alt="screen" src="https://github.com/user-attachments/assets/26617626-843f-477c-9f6e-52ab41c55440" />
+<img width="1201" height="896" alt="screen" src="https://github.com/user-attachments/assets/4468224a-54ba-4a71-8d76-13d417079866" />
