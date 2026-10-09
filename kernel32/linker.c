@@ -64,6 +64,16 @@ bool load_mod(char diskletter,char *name)
 	CALL(module,resolve_function);
 }
 
+bool unload_mod(u32 idx)
+{
+	if((idx > 256) || (!modulelist[idx].start)) return 0;
+	free(modulelist[idx].start);
+	modulelist[idx].start = 0;
+	modulelist[idx].path = 0;
+	modulelist[idx].size = 0;
+	return 1;
+}
+
 struct function_info *get_linker_head()
 {
 	return head_fnc;

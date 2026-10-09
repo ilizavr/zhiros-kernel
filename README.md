@@ -65,6 +65,7 @@ _register_function(char *function_name, void* call, char *description) -> None
 _replace_function(char *function_name, void* newfnc) -> bool success //переопределение функций в линкере
 _hook_interrupt(u32 n, void* function) -> bool success //хук прерывания, для предотвращения конфликта модулей за прерывания
 _load_mod(char diskletter, char* path) -> bool success
+_unload_mod(u32 idx) -> bool success
 ```
 ### таймер
 ```c
@@ -150,16 +151,16 @@ INIT void init(void* _resolve_function(char* name))
 ## набор модулей:
 - zhirGL - ожидается оконный менеджер
 - windowmanager - разработка ведется - https://github.com/TINERKOTL/zhiros-module-example
-- mouse-driver - готов - NEUROSLOP - https://github.com/ilizavr/mouse-module
+- mouse-driver - готов - NEUROSLOP - в этом репозитории
 - zhir-vm(jit vm для memorysafe языка) - разработка ведется - https://github.com/bust6k/ZhirVM
 - ide-driver, fat16 - скоро
 - network - ожидается доработка ядра
 - unixbox(слой совместимости для unix-подобных программ) - в планах
-- elf module loader - решает проблемы raw модулей - скоро
+- clitools - готов - базовый загрузчик elf файлов, fetch и другие консольные утилиты - в этом репозитории
 
 ## нейросети и вайбкодинг
 - в ядре не должно быть ни строчки кода написанного ИИ.
 - разработчикам модулей МОЖНО пользоваться нейросетями, но тогда модуль должен иметь пометку NEUROSLOP. 
 - написание тестов и review кода с помощью нейросетей РАЗРЕШЕНО
 
-<img width="1201" height="896" alt="screen" src="https://github.com/user-attachments/assets/4468224a-54ba-4a71-8d76-13d417079866" />
+<img width="1768" height="1286" alt="screen" src="https://github.com/user-attachments/assets/fe965596-a3c1-451b-b6fc-fabca75baf92" />

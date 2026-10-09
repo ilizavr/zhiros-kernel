@@ -105,6 +105,7 @@ void main(i_ptr addr, u32 magic)
     register_function("_open",open,"_open(char diskletter, char* path) -> struct file*");
     register_function("_mkdir",open,"_mkdir(char diskletter, char* path) -> struct file*");
     register_function("_load_mod",load_mod,"_load_mod(char diskletter, char* path) -> bool success");
+    register_function("_unload_mod",unload_mod,"_unload_mod(u32 idx) -> bool success");
     register_function("_get_linker_head",get_linker_head,"_get_linker_head() -> struct function_info*");
     register_function("_get_module_array",get_module_array,"_get_module_array() -> struct module_info*");
     register_function("_sleep_ms",sleep_ms,"_sleep_ms(u32 ms) -> None");

@@ -99,6 +99,11 @@ u32 read_unstar(struct file* file, void* buffer, u32 size, u32 offset)
     return bytes_read;
 }
 
+bool close_unstar()
+{
+    return true;
+}
+
 struct file* open_unstar(struct disk* dsk, char *path)
 {
     if (!dsk || !path) {
@@ -156,7 +161,7 @@ struct file* open_unstar(struct disk* dsk, char *path)
             nf->read = read_unstar;
             nf->getsize = getsize_unstar;
             nf->write = 0;
-            nf->close = 0;
+            nf->close = (void*)close_unstar;
             nf->is_dir = (header->typeflag == '5');
             nf->path = path;
             nf->other_info = info;

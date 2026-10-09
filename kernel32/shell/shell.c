@@ -6,7 +6,7 @@
 #include "../printf.h"
 #include "../allocator.h"
 #include "../../lib/hexdump.h"
-
+#include "../vfs.h"
 
 #define MAX_ARGS 4
 
@@ -67,9 +67,35 @@ void* cls()
 void* lsmod()
 {
     struct module_info * mdls = get_module_array();
-    for(int i = 0; i< 256;i++) if(mdls[i].start) printf("%s | %x-%x\n",mdls[i].path, mdls[i].start,mdls[i].start+mdls[i].size);
+    for(int i = 0; i< 256;i++) if(mdls[i].start) printf("%u. %s | %x-%x\n",i,mdls[i].path, mdls[i].start,mdls[i].start+mdls[i].size);
 
     return 0;
+}
+void printfile(char diskletter, char* name)
+{
+    struct file* f = open(diskletter,name);
+    if(!f)
+    {
+        LOGE("file %s not found", name);
+        return;
+    }
+
+    int size = f->getsize(f);
+    if(size>65536)
+    {
+        LOGW("file is big. continue?");
+        char chr = getchar();
+        if(chr!='y'){
+            f->close(f);
+            return;
+        }
+    }
+    char *buffer = kalloc(size+1);
+    f->read(f,buffer,size,0);
+    buffer[size] = 0;
+    printf("%s",buffer);
+    f->close(f);
+    free(buffer);
 }
 
 void start_shell()
@@ -77,10 +103,11 @@ void start_shell()
     register_function("help",printlinkerlist,"print all functions in linker list");
     register_function("lsmod",lsmod,"print all loaded modules");
     register_function("cls",cls,"clear screen");
-    register_function("_dmp",dumpmem,"dump ram. _dmp i:0xaddr i:size");
+    register_function("_pf",printfile,"print file. use _pf c:diskletter name");
+    register_function("_dmp",dumpmem,"hexdump ram. _dmp i:0xaddr i:size");
 
 
-    printf("shell started\ntype _help to get all linker funtion\n");
+    printf("shell started\ntype help to get all linker funtion\n");
     printf("  use _function type:arg1 type:arg2\n");
     printf("  if arg is string _function stringarg\n");
     printf("  use *0xaddr to call function by address\n");
