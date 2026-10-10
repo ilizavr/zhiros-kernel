@@ -8,6 +8,7 @@
 #include "../interrupt.h"
 #include "../../lib/ports.h"
 #include "fbcon.h"
+#include "../multitask.h"
 
 volatile bool key_state_matrix[256] = {0};
 
@@ -51,7 +52,7 @@ bool* get_key_state_matrix()
 
 char getchar()
 {
-    while(kb_head == kb_tail) HLT();
+    while(kb_head == kb_tail) yield();
     char c = kb_buffer[kb_tail];
     kb_tail = (kb_tail+1)&KB_BUF_MASK;
     return c;

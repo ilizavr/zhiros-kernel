@@ -29,6 +29,7 @@ header_end:
 section .text
 global _start
 global _interrupt_array
+global switch_context
 
 extern main
 extern pic_eoi
@@ -70,7 +71,17 @@ _interrupt_array:
 %assign i i+1
 %endrep
 
+switch_context:
+    mov eax, [esp+4]
+    mov ecx, [esp+8]
 
+    pusha
+    mov [ecx], esp
+
+    mov esp, eax
+    popa
+
+    ret
 
 section .bss
 resb 65536

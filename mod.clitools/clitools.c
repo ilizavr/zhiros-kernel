@@ -17,6 +17,8 @@ static void (*print_color)(char*,u32);
 static u32 (*getticks)();
 static bool (*hook_interrupt)(u32 n, void* function);
 static void* (*resolve_function)(char* name);
+struct task* (*create_task)(char* name, void* function);
+void (*yield)();
 
 struct fb_info*fb;
 
@@ -84,7 +86,7 @@ static void fetch()
     printf("%ux%u",fb->screen_width,fb->screen_height);
     print_color("\n                 Uptime: ",0xAAAAFF);
     if(ticks>3600) printf("%uh ", ticks/3600);
-    if(ticks>60) printf("%uh ", (ticks%3600)/60);
+    if(ticks>60) printf("%um ", (ticks%3600)/60);
     printf("%us", ticks%60);
     print_color("\n                 Free memory: ",0xAAAAFF);
     printf("%uM",getfree()>>20);
@@ -102,6 +104,31 @@ static void fetch()
 }
 
 #include "elfloader.h"
+
+static struct image *logo_img = 0;
+
+static void img(char disk, char* name)
+{
+    if(logo_img) free(logo_img);
+
+    struct file *logo = open(disk,name);
+    int size = logo->getsize(logo);
+    logo_img = alloc(size);
+
+    logo->read(logo, logo_img, size, 0);
+    logo->close(logo);
+}
+static void imgview()
+{
+    while(true) {
+        if(logo_img){
+            fb = getfb();
+            drawimage(logo_img, fb->screen_width-logo_img->width, 0);
+        }
+        yield();
+    }
+}
+
 INIT void init(void* (*_resolve_function)(char* name))
 {
     resolve_function = _resolve_function;
@@ -116,7 +143,12 @@ INIT void init(void* (*_resolve_function)(char* name))
     getticks = _resolve_function("_getticks");
     register_function = _resolve_function("_register_function");
     hook_interrupt = _resolve_function("_hook_interrupt");
+    create_task = _resolve_function("_create_task");
+    yield = _resolve_function("_yield");
 
     register_function("fetch",fetch,"print short system information");
     register_function("_elfload",elf_load,"_elfload(char diskletter,char* name) -> bool success");
+    register_function("_img",img,"_img c:diskletter name. print image in fbcon");
+
+    create_task("img renderer",imgview);
 }

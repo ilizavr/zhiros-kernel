@@ -1,6 +1,7 @@
 #include "../lib/zhirtypes.h"
 #include "../lib/ports.h"
 #include "interrupt.h"
+#include "multitask.h"
 
 #define FREQ 100
 
@@ -9,7 +10,7 @@ volatile u32 ticks = 0;
 void sleep_ms(u32 ms)
 {
     u32 t = ticks;
-    while(ms>(ticks-t)) HLT();
+    while(ms>(ticks-t)) yield();
 }
 u32 getticks()
 {

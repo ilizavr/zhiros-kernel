@@ -6,7 +6,7 @@ rm -rf build/
 mkdir build
 mkdir ramdisk
 
-FLAGS="-m32 -Wint-conversion -nostdlib -fno-pie -no-pie -fno-stack-protector -ffreestanding -O0 -Wall -Wextra -Wno-unused-function -Wno-unused-variable -Wno-div-by-zero"
+FLAGS="-m32 -Wint-conversion -nostdlib -fno-pie -no-pie -fno-stack-protector -ffreestanding -O1 -Wall -Wextra -Wno-unused-function -Wno-unused-variable -Wno-div-by-zero"
 MODULE_FLAGS="$FLAGS -fPIC -fno-common"
 ELF_MOD_FLAGS="$FLAGS -T ld/elf.ld"
 
@@ -30,8 +30,9 @@ gcc $FLAGS -c kernel32/vfs.c -o build/vfs.o
 gcc $FLAGS -c kernel32/shell/keyboard.c -o build/keyboard.o
 gcc $FLAGS -c kernel32/shell/shell.c -o build/shell.o
 gcc $FLAGS -c kernel32/timer.c -o build/timer.o
+gcc $FLAGS -c kernel32/multitask.c -o build/multitask.o
 nasm -f elf32 kernel32/kernel.asm -o build/kernel_asm.o
-ld -m elf_i386 -T kernel32/linker.ld -o iso/boot/kernel.bin build/kernel_asm.o build/kernel_c.o build/printf.o build/allocator.o build/fbcon.o build/disk.o build/panic.o build/interrupt.o build/linker.o build/keyboard.o build/vfs.o build/shell.o build/timer.o
+ld -m elf_i386 -T kernel32/linker.ld -o iso/boot/kernel.bin build/kernel_asm.o build/kernel_c.o build/printf.o build/allocator.o build/fbcon.o build/disk.o build/panic.o build/interrupt.o build/linker.o build/keyboard.o build/vfs.o build/shell.o build/timer.o build/multitask.o
 
 
 #compile modules

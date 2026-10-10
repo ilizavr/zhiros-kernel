@@ -15,6 +15,15 @@
 #include "vfs.h"
 #include "shell/shell.h"
 #include "timer.h"
+#include "multitask.h"
+
+char ramdisk_letter;
+
+void init()
+{
+    LOGI("starting initialization script");
+    #include "../init.h"
+}
 
 void main(i_ptr addr, u32 magic)
 {
@@ -78,6 +87,9 @@ void main(i_ptr addr, u32 magic)
 
     struct disk* ramdisk = ramdisk_init(module_tag->mod_start,module_tag->mod_end);
 
+    init_multitask();
+    LOGI("multitask inited");
+
     init_keyboard();
     LOGI("keyboard inited");
     init_timer();
@@ -110,13 +122,16 @@ void main(i_ptr addr, u32 magic)
     register_function("_get_module_array",get_module_array,"_get_module_array() -> struct module_info*");
     register_function("_sleep_ms",sleep_ms,"_sleep_ms(u32 ms) -> None");
     register_function("_getticks",getticks,"_getticks() -> u32 ticks");
+    register_function("_create_task",create_task,"_create_task(char * name, void* function) -> struct task* ");
+    register_function("_yield",yield,"_yield() -> None");
+    register_function("_get_tasks",get_tasks,"_get_tasks() -> struct task*");
+    //register_function("_set_preemptive_mode",set_preemptive_mode,"_set_preemptive_mode(bool e) -> None");
+
     LOGI("kernel api registred");
 
-    char ramdisk_letter = mount(ramdisk,open_unstar,0);
+    ramdisk_letter = mount(ramdisk,open_unstar,0);
     LOGI("ramdisk letter: %c",ramdisk_letter);
 
-    //char buf[256];gets(buf,256);
 
-#include "../init.h"
-
+    init();
 }

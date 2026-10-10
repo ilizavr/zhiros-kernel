@@ -31,7 +31,7 @@ typedef unsigned int i_ptr;
 #define INIT __attribute__((section(".text.init")))
 
 #define CALL(addr,...) ((void(*)(...))addr)(__VA_ARGS__)
-#define HLT() asm volatile("hlt")
+#define HLT() asm volatile("hlt") //deprecated, use _yield
 #define STI() asm volatile("sti")
 #define CLI() asm volatile("cli")
 
@@ -118,6 +118,14 @@ struct file // это также директория
     bool (*close)(struct file* file);
 
     void* other_info;
+};
+
+struct task
+{
+    int tid;
+    char *name;
+    void *esp;
+    void *stack_base;
 };
 
 static const char keyboard_map[128] =
