@@ -184,5 +184,4 @@ void _start(void* (*_resolve_function)(char* name))
 `init.h` настройки инициализации ОС
 
 ## screenshot
-<img width="1770" height="1293" alt="изображение" src="https://github.com/user-attachments/assets/319946b9-42f7-4043-818b-1bd168b6de7b" />
-
+<img width="1722" height="1283" alt="изображение" src="https://github.com/user-attachments/assets/2ef8da86-7482-4657-9ba9-c8f1829c6a75" />
