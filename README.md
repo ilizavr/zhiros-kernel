@@ -32,7 +32,7 @@
 6. динамический линковщик модулей
 7. обработчик CPU exception. вывод паники с регистрами, стеком и консолью(частично готово)
 8. консоль отладки и минимальный набор утилит: disasm, ls, lsmod, load_module(частично готово)
-9. планировщик(не готов)
+9. планировщик
 
 ## API ядра для модулей и консоли:
 ### графика
@@ -83,11 +83,11 @@ _mount(struct disk* dsk, void * open_fnc, void* mkdir_function) -> bool success
 _open(char diskletter, char* path) -> struct file*
 _mkdir(char diskletter, char* path) -> struct file*
 ```
-### многопоточность - не реализовано
+### многопоточность
 ```c
 _yield() -> None
-_get_tasks() -> struct task** tasks
-_create_task(void* function) -> None
+_get_tasks() -> struct task* tasks
+_create_task(char * name, void* function) -> struct task* 
 ```
 
 ## Основные структуры ядра
@@ -185,3 +185,4 @@ void _start(void* (*_resolve_function)(char* name))
 
 ## screenshot
 <img width="1770" height="1293" alt="изображение" src="https://github.com/user-attachments/assets/319946b9-42f7-4043-818b-1bd168b6de7b" />
+
