@@ -1,6 +1,8 @@
 # zhir-kernel
 ядро для жирОС
 
+# ЧИТАЙТЕ ДОКУМЕНТАЦИЮ ПРЕЖДЕ ЧЕМ СТАВИТЬ ОС
+
 ## лицензия:
 - код ядра - открыт под лицензией GPLv3+
 - код примеров модулей и библиотек для них, скриптов компиляции под лицензией MIT
@@ -34,131 +36,6 @@
 8. консоль отладки и минимальный набор утилит: disasm, ls, lsmod, load_module(частично готово)
 9. планировщик
 
-## API ядра для модулей и консоли:
-### графика
-```c
-_print_color(char *string, u32 color) -> None
-_printf(...) -> None
-_clearframe() -> None
-_fbcon_stop() -> fb_info* fb //отключается базовый графический драйвер для замены на кастомный
-_getfb() -> fb_info* fb //получить fbinfo без отключения текстового графического драйвера
-```
-### клавиатура
-```c
-_get_key_state_matrix() -> bool key[256] //возвращает массив key[keycode]=status, где status=1 когда нажата и 0 когда отпущена
-_gets(char* string, int max_size) -> int readed //чтение с клавиатуры для консольных приложений
-_getchar() -> char
-```
-### работа с памятью
-```c
-_alloc(u32 size) -> void* buf
-_alloc_aligned(u32 size, u32 allign) -> void* buf // не реализовано
-_free(void* buf) -> bool success
-_getfree() -> i_ptr freemem
-```
-### линковка модулей и ядра
-```c
-_get_linker_head() -> struct function_info *  //получить связный список функций линкера
-_get_module_array() -> struct module_info *  //получить массив модулей
-_resolve_function(char* name) -> void* function
-_register_function(char *function_name, void* call, char *description) -> None
-_replace_function(char *function_name, void* newfnc) -> bool success //переопределение функций в линкере
-_hook_interrupt(u32 n, void* function) -> bool success //хук прерывания, для предотвращения конфликта модулей за прерывания
-_load_mod(char diskletter, char* path) -> bool success
-_unload_mod(u32 idx) -> bool success
-```
-### таймер
-```c
-_sleep_ms(u32 ms) -> None
-_getticks(u32 ms) -> u32 ticks
-```
-### абстракции дисков
-```c
-_diskadd(struct disk* dsk) -> bool success
-_getdisk(int idx) -> struct disk*
-```
-### VFS
-```c
-_mount(struct disk* dsk, void * open_fnc, void* mkdir_function) -> bool success
-_open(char diskletter, char* path) -> struct file*
-_mkdir(char diskletter, char* path) -> struct file*
-```
-### многопоточность
-```c
-_yield() -> None
-_get_tasks() -> struct task* tasks
-_create_task(char * name, void* function) -> struct task* 
-```
-
-## Основные структуры ядра
-```c
-struct disk//эта же структура используется для разделов диска
-{
-    char *name;
-    u32 size;//in sectors
-
-    bool (*lba_read)(struct disk* dsk, u32 lba, char* buffer, u32 blocks);
-    bool (*lba_write)(struct disk* dsk, u32 lba, char* buffer, u32 blocks);
-
-    void* other_info;
-    void* fs_info;
-};
-
-struct file // это также директория
-{
-    struct disk* dsk;
-    char *path;
-    bool is_dir;
-
-    u32 (*read)(struct file* file, void* buffer, u32 size, u32 offset);// read от директории читает имяфайла\nимя2файла и тд. крч read от директории выглядит как ls
-    u32 (*write)(struct file* file, void* buffer, u32 size, u32 offset);
-    u32 (*getsize)(struct file* file); //размер файла
-
-    bool (*close)(struct file* file);
-
-    void* other_info;
-};
-```
-остальные описаны в `zhirtypes.h`
-
-## linker
-linker хранит функции 2х типов - `fastcall`(имеют тип стандартный для C и префикс _ и не безопасны) и `zhirfunction`(для zhirvm безопасные)
-zhirfunction - это функция, которая принимает массив объектов(zhirobjectarray) и возвращает zhirobject(универсальный объект, который хранит свой тип в своей структуре)
-
-регистрация API-функций в `kernel.c`
-
-регистрация шелл функций в `shell/shell.c`
-
-модули имеют формат raw bin. при запуске к ним в первом аргументе передается указатель на функцию резольвера символов(resolve_symbol)
-### ВАЖНО: 
-модули компилируются с определенным набором флагов компиляции(смотрите пример компиляции в `build32.sh`). иногда бывают проблемы с массивами и функциями, которые вызываются из вне(добавляйте `static` при объявлении). желательно компилировать модули в elf формат, смотрите elf module loder
-
-### пример кода raw модуля
-```c
-#include "lib/zhirtypes.h"
-#include "lib/string.h"
-
-void (*printf)(char* fmt, ...);
-
-INIT void init(void* _resolve_function(char* name))
-{
-    printf = _resolve_function("_printf");
-
-    printf("hello world from module!");
-}
-```
-### пример кода elf программы
-```c
-void (*printf)(...);
-
-void _start(void* (*_resolve_function)(char* name))
-{
-    printf = _resolve_function("_printf");
-
-    printf("hello world!\n");
-}
-```
-
 ## набор модулей:
 - clitools - готов
 - mouse-driver(NEUROSLOP) - готов
@@ -173,15 +50,6 @@ void _start(void* (*_resolve_function)(char* name))
 - разработчикам модулей МОЖНО пользоваться нейросетями, но тогда модуль должен иметь пометку NEUROSLOP. 
 - в первое время модули пишем с помощью нейросетей, как технический долг. в будущем все основные модули будут без нейросетевого кода
 - написание тестов и review кода с помощью нейросетей РАЗРЕШЕНО
-
-## сборка ОС
-`build32.sh` скрипт компиляции
-
-для компиляции elf программ используем файл линковки ld/elf.ld
-
-для компиляции raw модулей(.mod) `build_module путь.c ramdisk/имя.mod` 
-
-`init.h` настройки инициализации ОС
 
 ## screenshot
 <img width="1722" height="1283" alt="изображение" src="https://github.com/user-attachments/assets/2ef8da86-7482-4657-9ba9-c8f1829c6a75" />
