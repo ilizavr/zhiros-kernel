@@ -160,19 +160,28 @@ void _start(void* (*_resolve_function)(char* name))
 ```
 
 ## набор модулей:
-- zhirGL - ожидается оконный менеджер
-- windowmanager - разработка ведется - https://github.com/TINERKOTL/zhiros-module-example
-- mouse-driver - готов - NEUROSLOP - в этом репозитории
+- clitools - готов
+- mouse-driver(NEUROSLOP) - готов
+- windowmanager+zhirGL - разработка ведется - https://github.com/TINERKOTL/zhiros-module-example
 - zhir-vm(jit vm для memorysafe языка) - разработка ведется - https://github.com/bust6k/ZhirVM
 - ide-driver, fat16 - скоро
-- network - ожидается доработка ядра
+- network - скоро
 - unixbox(слой совместимости для unix-подобных программ) - в планах
-- clitools - готов - базовый загрузчик elf файлов, fetch и другие консольные утилиты - в этом репозитории
 
 ## нейросети и вайбкодинг
 - в ядре не должно быть ни строчки кода написанного ИИ.
 - разработчикам модулей МОЖНО пользоваться нейросетями, но тогда модуль должен иметь пометку NEUROSLOP. 
+- в первое время модули пишем с помощью нейросетей, как технический долг. в будущем все основные модули будут без нейросетевого кода
 - написание тестов и review кода с помощью нейросетей РАЗРЕШЕНО
+
+## сборка ОС
+`build32.sh` скрипт компиляции
+
+для компиляции elf программ используем файл линковки ld/elf.ld
+
+для компиляции raw модулей(.mod) `build_module путь.c ramdisk/имя.mod` 
+
+`init.h` настройки инициализации ОС
 
 ## screenshot
 <img width="1770" height="1293" alt="изображение" src="https://github.com/user-attachments/assets/319946b9-42f7-4043-818b-1bd168b6de7b" />
