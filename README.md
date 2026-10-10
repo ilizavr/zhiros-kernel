@@ -133,7 +133,7 @@ zhirfunction - это функция, которая принимает масс
 ### ВАЖНО: 
 модули компилируются с определенным набором флагов компиляции(смотрите пример компиляции в `build32.sh`). иногда бывают проблемы с массивами и функциями, которые вызываются из вне(добавляйте `static` при объявлении). желательно компилировать модули в elf формат, смотрите elf module loder
 
-### пример кода модуля
+### пример кода raw модуля
 ```c
 #include "lib/zhirtypes.h"
 #include "lib/string.h"
@@ -145,6 +145,17 @@ INIT void init(void* _resolve_function(char* name))
     printf = _resolve_function("_printf");
 
     printf("hello world from module!");
+}
+```
+### пример кода elf программы
+```c
+void (*printf)(...);
+
+void _start(void* (*_resolve_function)(char* name))
+{
+    printf = _resolve_function("_printf");
+
+    printf("hello world!\n");
 }
 ```
 
@@ -163,4 +174,5 @@ INIT void init(void* _resolve_function(char* name))
 - разработчикам модулей МОЖНО пользоваться нейросетями, но тогда модуль должен иметь пометку NEUROSLOP. 
 - написание тестов и review кода с помощью нейросетей РАЗРЕШЕНО
 
-<img width="1768" height="1286" alt="screen" src="https://github.com/user-attachments/assets/fe965596-a3c1-451b-b6fc-fabca75baf92" />
+## screenshot
+<img width="1770" height="1293" alt="изображение" src="https://github.com/user-attachments/assets/319946b9-42f7-4043-818b-1bd168b6de7b" />
