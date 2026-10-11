@@ -5,20 +5,7 @@
 
 #include "../lib/zhirtypes.h"
 #include "../lib/string.h"
-
-static struct fb_info* (*getfb)();
-static i_ptr (*getfree)();
-static void (*register_function)(char *function_name, void* call, char *description);
-static struct file* (*open)(char diskletter, char* path);
-static void (*free)(void*);
-static void* (*alloc)(u32 size);
-static void (*printf)(...);
-static void (*print_color)(char*,u32);
-static u32 (*getticks)();
-static bool (*hook_interrupt)(u32 n, void* function);
-static void* (*resolve_function)(char* name);
-struct task* (*create_task)(char* name, void* function);
-void (*yield)();
+#include "../lib/zhirapi.h"
 
 struct fb_info*fb;
 
@@ -118,37 +105,26 @@ static void img(char disk, char* name)
     logo->read(logo, logo_img, size, 0);
     logo->close(logo);
 }
-static void imgview()
+static void clitools()
 {
     while(true) {
         if(logo_img){
             fb = getfb();
             drawimage(logo_img, fb->screen_width-logo_img->width, 0);
         }
+        if((getticks()%1000)>500)printf("_\b");
+        else printf(" \b");
         yield();
     }
 }
 
 INIT void init(void* (*_resolve_function)(char* name))
 {
-    resolve_function = _resolve_function;
-
-    getfb = _resolve_function("_getfb");
-    open = _resolve_function("_open");
-    free = _resolve_function("_free");
-    alloc = _resolve_function("_alloc");
-    printf = _resolve_function("_printf");
-    print_color = _resolve_function("_print_color");
-    getfree = _resolve_function("_getfree");
-    getticks = _resolve_function("_getticks");
-    register_function = _resolve_function("_register_function");
-    hook_interrupt = _resolve_function("_hook_interrupt");
-    create_task = _resolve_function("_create_task");
-    yield = _resolve_function("_yield");
+    api_init(_resolve_function);
 
     register_function("fetch",fetch,"print short system information");
     register_function("_elfload",elf_load,"_elfload(char diskletter,char* name) -> bool success");
-    register_function("_img",img,"_img c:diskletter name. print image in fbcon");
+    register_function("_img",img,"_img;c:diskletter;name. print image in fbcon");
 
-    create_task("img renderer",imgview);
+    create_task("clitools thread",clitools);
 }

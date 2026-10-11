@@ -35,7 +35,7 @@ _unload_mod(u32 idx) -> bool success
 ### таймер
 ```c
 _sleep_ms(u32 ms) -> None
-_getticks(u32 ms) -> u32 ticks
+_getticks() -> u32 ticks
 ```
 ### абстракции дисков
 ```c

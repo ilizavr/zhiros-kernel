@@ -125,6 +125,7 @@ void main(i_ptr addr, u32 magic)
     register_function("_create_task",create_task,"_create_task(char * name, void* function) -> struct task* ");
     register_function("_yield",yield,"_yield() -> None");
     register_function("_get_tasks",get_tasks,"_get_tasks() -> struct task*");
+    register_function("_kill",kill,"_kill() -> bool success");
     //register_function("_set_preemptive_mode",set_preemptive_mode,"_set_preemptive_mode(bool e) -> None");
 
     LOGI("kernel api registred");

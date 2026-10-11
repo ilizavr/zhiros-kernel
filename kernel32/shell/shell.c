@@ -7,6 +7,8 @@
 #include "../allocator.h"
 #include "../../lib/hexdump.h"
 #include "../vfs.h"
+#include "../multitask.h"
+#include "../disk.h"
 
 #define MAX_ARGS 4
 
@@ -57,6 +59,26 @@ void dumpmem(void* addr, i_ptr size)
     }
     hexdump(addr,size);
 }
+void dumpdisk(u32 idx, u32 lba, u32 blocks)
+{
+    if(blocks>32)
+    {
+        LOGW("many blocks. continue?");
+        char chr = getchar();
+        if(chr!='y') return;
+    }
+    struct disk* d = getdisk(idx);
+    if(!d){
+        LOGE("disk not found");
+        return;
+    }
+
+    void *buf = kalloc(blocks*512);
+    d->lba_read(d,lba,buf,blocks);
+
+    hexdump(buf,blocks*512);
+    free(buf);
+}
 
 void* cls()
 {
@@ -98,33 +120,59 @@ void printfile(char diskletter, char* name)
     free(buffer);
 }
 
+void* ps()
+{
+    struct task* tasks = get_tasks();
+    printf("TID | NAME\n");
+    for(int i = 0;i<MAX_TASKS;i++)
+    {
+        if(tasks[i].tid!=0) printf("%u    %s\n",tasks[i].tid,tasks[i].name);
+    }
+    return NULL;
+}
+
+void* lsblk()
+{
+    for(int i = 0; i< MAX_DISK_COUNT;i++)
+    {
+        struct disk* d = getdisk(i);
+        if(!d) continue;
+
+        printf("index:%u    name:%s    size:%ukb",i,d->name,d->size/2);
+        if(d->mountletter) printf("    letter:%c",d->mountletter);
+        printf("\n");
+    }
+
+    return 0;
+}
+
 void start_shell()
 {
     register_function("help",printlinkerlist,"print all functions in linker list");
     register_function("lsmod",lsmod,"print all loaded modules");
+    register_function("lsblk",lsblk,"print all disk");
     register_function("cls",cls,"clear screen");
-    register_function("_pf",printfile,"print file. use _pf c:diskletter name");
-    register_function("_dmp",dumpmem,"hexdump ram. _dmp i:0xaddr i:size");
+    register_function("ps",ps,"proccess list");
+    register_function("_pf",printfile,"print file. use _pf;c:diskletter;name");
+    register_function("_dmp",dumpmem,"hexdump ram. _dmp;i:0xaddr;i:size");
+    register_function("_dmpdsk",dumpdisk,"hexdump disk. _dmpdsk;i:diskidx;i:lba;i:blocks");
 
 
-    printf("shell started\ntype help to get all linker funtion\n");
-    printf("  use _function type:arg1 type:arg2\n");
-    printf("  if arg is string _function stringarg\n");
-    printf("  use *0xaddr to call function by address\n");
+    printf("debug shell\n");
     while(true)
     {
         i_ptr args[MAX_ARGS];
         u32 current_arg = 0;
 
         char buffer[256];
-        print_color(">",0xFFFFFF);
+        printf(">");
         gets(buffer,256);
 
         if(!strlen(buffer)){
             continue;
         }
 
-        char d[] = " \t\n";
+        char d[] = ";";
         char * token = strtok(buffer,d);
 
 
@@ -146,14 +194,13 @@ void start_shell()
             i_ptr ret = _function(args[0],args[1],args[2],args[3]);
             printf("\nreturn %x\n",ret);
         }
-        else {
+        else if (token[0] == '_'){ // fastcall
             i_ptr (*_function)(...) = resolve_function(token);
 
             if(!_function) {
                 LOGE("function %s not found!",token);
                 continue;
             }
-            bool is_fastcall = (token[0] == '_');
 
             token = strtok(0,d);
 
@@ -168,7 +215,18 @@ void start_shell()
             }
 
             i_ptr ret = _function(args[0],args[1],args[2],args[3]);
-            if(is_fastcall)printf("\nreturn %x\n",ret);
+            printf("\nreturn %x\n",ret);
+        }
+        else { // zhirfunction
+            i_ptr (*_function)(...) = resolve_function(token);
+
+            if(!_function) {
+                LOGE("function %s not found!",token);
+                continue;
+            }
+            //TODO: дописать обработку аргументов zhirfunction
+
+            _function();
         }
     }
 }

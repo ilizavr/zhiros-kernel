@@ -31,6 +31,7 @@ char mount(struct disk* dsk, void * open_fnc, void * mkdir_fnc)
     mounts[current_letter_disk-'A'].mkdir = mkdir_fnc;
     current_letter_disk++;
 
+    dsk->mountletter = current_letter_disk-1;
     restore_irq(eflags);
     return current_letter_disk-1;
 }

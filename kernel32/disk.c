@@ -7,7 +7,7 @@
 #include "disk.h"
 #include "../lib/string.h"
 #include "allocator.h"
-#define MAX_DISK_COUNT 16
+
 
 volatile struct disk* disks[MAX_DISK_COUNT] = {0};
 volatile u8 disks_count = 0;
@@ -61,6 +61,7 @@ struct disk* ramdisk_init(i_ptr modulestart, i_ptr moduleend)
     newramdisk->size = (moduleend-modulestart)/512+1;
     newramdisk->name = "ramdisk";
     newramdisk->other_info = (void*)modulestart;
+    newramdisk->mountletter=0;
 
     if(!diskadd(newramdisk)) return 0;
     return newramdisk;

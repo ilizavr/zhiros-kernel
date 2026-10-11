@@ -2,9 +2,7 @@
 #include "../lib/string.h"
 #include "interrupt.h"
 #include "allocator.h"
-
-#define STACK_SIZE 4096
-#define MAX_TASKS 256
+#include "multitask.h"
 
 struct task tasks[MAX_TASKS] = {0};
 int current_task_idx = 0;
@@ -51,6 +49,16 @@ struct task* create_task(char *name, void* function)
     }
 
     return 0;
+}
+
+bool kill(int tid)
+{
+    if(tid<=0 || tasks[tid-1].tid != tid) return false;
+
+    tasks[tid-1].tid = 0;
+    free(tasks[tid-1].stack_base);
+
+    return true;
 }
 
 void yield()

@@ -53,6 +53,10 @@ printf(__VA_ARGS__); \
 printf("\n");\
 } while(0)
 
+#define MAX_DISK_COUNT 16
+#define STACK_SIZE 4096
+#define MAX_TASKS 256
+
 
 PAK struct object
 {
@@ -97,6 +101,7 @@ struct disk//эта же структура используется для ра
 {
     char *name;
     u32 size;//in sectors
+    char mountletter;
 
     bool (*lba_read)(struct disk* dsk, u32 lba, char* buffer, u32 blocks);
     bool (*lba_write)(struct disk* dsk, u32 lba, char* buffer, u32 blocks);

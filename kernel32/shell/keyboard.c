@@ -72,7 +72,7 @@ u32 gets(char *str, u32 maxlen)
         if(chr == '\b')
         {
             if(i>0){
-                print("\b \b");
+                print("\b  \b\b");
                 i--;
             }
             continue;

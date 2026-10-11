@@ -86,7 +86,7 @@ void roll_screen()
 void putchar_color(char chr, u32 color)
 {
     if(stopcon) return;
-    if(chr == '\n' || (curx+6)>screen_width)
+    if((curx+6)>screen_width)
     {
         cury+=9;
         curx=0;
@@ -95,7 +95,6 @@ void putchar_color(char chr, u32 color)
             roll_screen();
             cury = screen_height-9;
         }
-        if(chr == '\n')return;
     }
     if(chr == '\b')
     {
@@ -104,6 +103,20 @@ void putchar_color(char chr, u32 color)
         return;
     }
 
+
+    if(chr == '\n')
+    {
+        put_sym_nobg(' ',curx,cury,color);
+
+        cury+=9;
+        curx=0;
+
+        if((cury+9)>screen_height) {
+            roll_screen();
+            cury = screen_height-9;
+        }
+        return;
+    }
 
     put_sym_nobg(chr,curx,cury,color);
     curx+=7;

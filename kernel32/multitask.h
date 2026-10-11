@@ -3,3 +3,4 @@ extern API void yield();
 extern void init_multitask();
 //extern API void set_preemptive_mode(bool e);
 extern API struct task* get_tasks();
+extern API bool kill(int tid);
