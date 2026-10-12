@@ -38,6 +38,8 @@ ld -m elf_i386 -T kernel32/linker.ld -o iso/boot/kernel.bin build/kernel_asm.o b
 #compile modules
 build_module mod.clitools/clitools.c ramdisk/clitools.mod
 build_module mod.drivers/mouse.c ramdisk/mouse.mod
+build_module mod.drivers/e1000.c ramdisk/e1000.mod
+build_module mod.net/net.c ramdisk/net.mod
 build_module mod.games/pong.c ramdisk/pong.mod
 build_module mod.examples/hello_mod.c ramdisk/hello.mod
 gcc $ELF_MOD_FLAGS mod.examples/hello_elf.c -o ramdisk/hello.elf
