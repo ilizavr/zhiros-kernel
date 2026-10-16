@@ -20,6 +20,7 @@ _alloc(u32 size) -> void* buf
 _alloc_aligned(u32 size, u32 allign) -> void* buf // не реализовано
 _free(void* buf) -> bool success
 _getfree() -> i_ptr freemem
+_getused() -> i_ptr usedmem
 ```
 ### линковка модулей и ядра
 ```c

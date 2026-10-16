@@ -30,6 +30,7 @@ section .text
 global _start
 global _interrupt_array
 global switch_context
+global wc_memcpy
 
 extern main
 extern pic_eoi

@@ -13,7 +13,7 @@ volatile struct function_info *head_fnc = 0;
 volatile struct module_info modulelist[256] = {0};
 volatile u32 curmod = 0;
 
-static char *strdup(char *str)
+static char *strdup_c(char *str)
 {
 	u32 len = strlen(str);
 	char * newstr = kalloc(len+1);
@@ -37,9 +37,9 @@ void register_function(char *function_name, void* call, char *description)
 	u32 eflags = save_irq();
 	struct function_info * newfnc = kalloc(sizeof(struct function_info));
 	newfnc->next = head_fnc;
-	newfnc->name = strdup(function_name);
+	newfnc->name = strdup_c(function_name);
 
-	if(description)newfnc->description = strdup(description);
+	if(description)newfnc->description = strdup_c(description);
 	else newfnc->description = "";
 
 	newfnc->call = call;
@@ -56,7 +56,7 @@ bool load_mod(char diskletter,char *name)
 	void *module = kalloc(size);
 	mod->read(mod,module,size,0);
 
-	modulelist[curmod].path = strdup(name);
+	modulelist[curmod].path = strdup_c(name);
 	modulelist[curmod].start = module;
 	modulelist[curmod].size = size;
 	curmod++;

@@ -22,6 +22,49 @@ static void *memcpy(void *dest, const void *src, size_t n) {
     while (n--) *d++ = *s++;
     return dest;
 }
+static void* memcpy_wc(void* dest, void* src, size_t n) {
+    u8* d = (u8*)dest;
+    u8* s = (u8*)src;
+
+    size_t blocks = n / 64;
+
+    if (blocks > 0) {
+        asm volatile (
+            "1:\n\t"
+            "movdqu   0(%1), %%xmm0\n\t"
+            "movdqu  16(%1), %%xmm1\n\t"
+            "movdqu  32(%1), %%xmm2\n\t"
+            "movdqu  48(%1), %%xmm3\n\t"
+
+            "movntdq %%xmm0,   0(%0)\n\t"
+            "movntdq %%xmm1,  16(%0)\n\t"
+            "movntdq %%xmm2,  32(%0)\n\t"
+            "movntdq %%xmm3,  48(%0)\n\t"
+
+            "add $64, %1\n\t"
+            "add $64, %0\n\t"
+            "dec %2\n\t"
+            "jnz 1b\n\t"
+
+            "sfence\n\t"
+            : "+r" (d), "+r" (s), "+r" (blocks)
+            :
+            : "memory", "xmm0", "xmm1", "xmm2", "xmm3"
+        );
+    }
+
+    size_t tail = n % 64;
+    if (tail > 0) {
+        asm volatile (
+            "rep movsb"
+            : "+D" (d), "+S" (s), "+c" (tail)
+            :
+            : "memory"
+        );
+    }
+
+    return dest;
+}
 
 static void *memmove(void *dest, const void *src, size_t n) {
     unsigned char *d = dest;

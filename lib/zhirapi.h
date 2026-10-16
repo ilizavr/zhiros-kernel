@@ -16,6 +16,7 @@ static char (*getchar)();
 static void* (*alloc)(u32 size);
 static bool (*free)(void* buf);
 static i_ptr (*getfree)();
+static i_ptr (*getused)();
 
 static struct function_info* (*get_linker_head)();
 static struct module_info* (*get_module_array)();
@@ -58,6 +59,7 @@ static inline void api_init(void* (*_resolve_function)(char* name)) {
     alloc = _resolve_function("_alloc");
     free = _resolve_function("_free");
     getfree = _resolve_function("_getfree");
+    getused = _resolve_function("_getused");
 
     get_linker_head = _resolve_function("_get_linker_head");
     get_module_array = _resolve_function("_get_module_array");

@@ -56,7 +56,11 @@ printf("\n");\
 #define MAX_DISK_COUNT 16
 #define STACK_SIZE 4096
 #define MAX_TASKS 256
+#define MAX_PART_COUNT 8
 
+#define _1K 1024
+#define _1M (1<<20)
+#define _1G (1<<30)
 
 PAK struct object
 {
@@ -92,16 +96,19 @@ struct fb_info
     u32 screen_height;
     u32 bpp;
     u32 screen_pitch;
-
     u32 curx;
     u32 cury;
+
+    i_ptr shadow_fb_addr;
 };
 
-struct disk//эта же структура используется для разделов диска
+struct disk
 {
     char *name;
     u32 size;//in sectors
     char mountletter;
+
+    struct disk* partitions[MAX_PART_COUNT];
 
     bool (*lba_read)(struct disk* dsk, u32 lba, char* buffer, u32 blocks);
     bool (*lba_write)(struct disk* dsk, u32 lba, char* buffer, u32 blocks);
@@ -116,7 +123,7 @@ struct file // это также директория
     char *path;
     bool is_dir;
 
-    u32 (*read)(struct file* file, void* buffer, u32 size, u32 offset);// read от директории читает имяфайла\nимя2файла и тд. крч read от директории выглядит как ls
+    u32 (*read)(struct file* file, void* buffer, u32 size, u32 offset);// read от директории читает массив struct file direntry[N]
     u32 (*write)(struct file* file, void* buffer, u32 size, u32 offset);
     u32 (*getsize)(struct file* file); //размер файла
 

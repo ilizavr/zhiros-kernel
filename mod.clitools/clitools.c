@@ -6,6 +6,10 @@
 #include "../lib/zhirtypes.h"
 #include "../lib/string.h"
 #include "../lib/zhirapi.h"
+#include "../lib/ports.h"
+#include "elfloader.h"
+#include "time.h"
+#include "../lib/hexdump.h"
 
 struct fb_info*fb;
 
@@ -17,9 +21,11 @@ struct image{
 
 static void put_pixel(u32 x, u32 y, u32 color) {
     volatile u32 *pixel = (volatile u32*)(fb->fb_addr + y * fb->screen_pitch + x * fb->bpp);
-    *pixel &= 0xFF000000;
-    if(fb->bpp == 4) *pixel |= 0xFF000000;
-    *pixel |= color;
+    volatile u32 *pixel2 = (volatile u32*)(fb->shadow_fb_addr + y * fb->screen_pitch + x * fb->bpp);
+    *pixel2 &= 0xFF000000;
+    if(fb->bpp == 4) *pixel2 |= 0xFF000000;
+    *pixel2 |= color;
+    *pixel = *pixel2;
 }
 
 static void drawimage(struct image*img,int startx,int starty)
@@ -51,7 +57,7 @@ static void get_cpu_model(char * buffer)
     buffer[48] = 0;
 }
 
-static void fetch()
+static struct object * fetch(struct objectArray* args)
 {
     char buffer[256];
     get_cpu_model(buffer);
@@ -75,8 +81,8 @@ static void fetch()
     if(ticks>3600) printf("%uh ", ticks/3600);
     if(ticks>60) printf("%um ", (ticks%3600)/60);
     printf("%us", ticks%60);
-    print_color("\n                 Free memory: ",0xAAAAFF);
-    printf("%uM",getfree()>>20);
+    print_color("\n                 Memory allocated: ",0xAAAAFF);
+    printf("%Z/%Z",getused()>>10,(getused()+getfree())>>10);
 
     free(fb);
 
@@ -90,32 +96,163 @@ static void fetch()
     free(logo_img);
 }
 
-#include "elfloader.h"
 
-static struct image *logo_img = 0;
 
 static void img(char disk, char* name)
 {
-    if(logo_img) free(logo_img);
-
     struct file *logo = open(disk,name);
     int size = logo->getsize(logo);
-    logo_img = alloc(size);
+    struct image *logo_img = alloc(size);
 
     logo->read(logo, logo_img, size, 0);
     logo->close(logo);
+
+    fb = getfb();
+    drawimage(logo_img, fb->screen_width-logo_img->width, 0);
+    free(logo_img);
+    free(fb);
 }
 static void clitools()
 {
     while(true) {
-        if(logo_img){
-            fb = getfb();
-            drawimage(logo_img, fb->screen_width-logo_img->width, 0);
-        }
-        if((getticks()%1000)>500)printf("_\b");
+        if((getticks()%500)>100)printf("\xDB\b");
         else printf(" \b");
         yield();
     }
+}
+
+static struct object *reboot(struct objectArray *args)
+{
+    CLI();
+    u8 good = 0x02;
+    while(good&0x02)good=inb(0x64);
+
+    outb(0x64,0xfe);
+
+    return 0;
+}
+
+static struct object *date(struct objectArray* args)
+{
+    struct rtc_time now = get_time();
+
+    printf("%u.%u.%u    %u:%u:%u\n",now.day,now.month,now.year+2000,now.hour,now.minute,now.second);
+
+    return 0;
+}
+
+static void dumpmem(void* addr, i_ptr size)
+{
+    if(size>65536)
+    {
+        LOGW("memory block is big. continue?");
+        char chr = getchar();
+        if(chr!='y') return;
+    }
+    hexdump(addr,size);
+}
+static void dumpdisk(u32 idx, u32 lba, u32 blocks)
+{
+    if(blocks>32)
+    {
+        LOGW("many blocks. continue?");
+        char chr = getchar();
+        if(chr!='y') return;
+    }
+    struct disk* d = getdisk(idx);
+    if(!d){
+        LOGE("disk not found");
+        return;
+    }
+
+    void *buf = alloc(blocks*512);
+    d->lba_read(d,lba,buf,blocks);
+
+    hexdump(buf,blocks*512);
+    free(buf);
+}
+
+static struct object * cls(struct objectArray* args)
+{
+    clearframe();
+    return 0;
+}
+
+static struct object * lsmod(struct objectArray* args)
+{
+    struct module_info * mdls = get_module_array();
+    printf("ID   LOCATION        NAME\n");
+    for(int i = 0; i< 256;i++) if(mdls[i].start) printf("%u    %x-%x   %s\n",i, mdls[i].start,mdls[i].start+mdls[i].size,mdls[i].path);
+
+    return 0;
+}
+static void printfile(char diskletter, char* name)
+{
+    struct file* f = open(diskletter,name);
+    if(!f)
+    {
+        LOGE("file %s not found", name);
+        return;
+    }
+
+    int size = f->getsize(f);
+    if(size>65536)
+    {
+        LOGW("file is big. continue?");
+        char chr = getchar();
+        if(chr!='y'){
+            f->close(f);
+            return;
+        }
+    }
+    char *buffer = alloc(size+1);
+    f->read(f,buffer,size,0);
+    buffer[size] = 0;
+    printf("%s",buffer);
+    f->close(f);
+    free(buffer);
+}
+
+static struct object* ps(struct objectArray* args)
+{
+    struct task* tasks = get_tasks();
+    printf("TID  NAME\n");
+    for(int i = 0;i<MAX_TASKS;i++)
+    {
+        if(tasks[i].tid!=0) printf("%u    %s\n",tasks[i].tid,tasks[i].name);
+    }
+    return NULL;
+}
+
+static void print_tree(struct disk*d, u32 depth)
+{
+    for(int i = 0;i<depth;i++)printf("  ");
+    if(depth>0)printf("\b\b|-");
+
+    printf("%s",d->name);
+    for(int i = (strlen(d->name)+depth*2);i<18;i++) printf(" ");
+    printf("%c       %Z\n",d->mountletter,((u64)d->size)>>1);
+
+    for(int i = 0;i<MAX_PART_COUNT;i++)
+    {
+        struct disk* dsk = d->partitions[i];
+        if(!dsk) continue;
+        print_tree(dsk,depth+1);
+    }
+}
+
+static struct object* lsblk(struct objectArray* args)
+{
+    printf("NAME              MOUNT   SIZE\n");
+
+    for(int i = 0;i<MAX_DISK_COUNT;i++)
+    {
+        struct disk* dsk = getdisk(i);
+        if(!dsk) continue;
+        print_tree(dsk,0);
+    }
+
+    return 0;
 }
 
 INIT void init(void* (*_resolve_function)(char* name))
@@ -123,8 +260,42 @@ INIT void init(void* (*_resolve_function)(char* name))
     api_init(_resolve_function);
 
     register_function("fetch",fetch,"print short system information");
+    register_function("reboot",reboot,"reboot system now");
+    register_function("date",date,"current date and time");
+    register_function("lsmod",lsmod,"print all loaded modules");
+    register_function("cls",cls,"clear screen");
+    register_function("ps",ps,"proccess list");
+    register_function("lsblk",lsblk,"print all disk");
+    register_function("_pf",printfile,"print file. use _pf;c:diskletter;name");
+    register_function("_dmp",dumpmem,"hexdump ram. _dmp;i:0xaddr;i:size");
+    register_function("_dmpdsk",dumpdisk,"hexdump disk. _dmpdsk;i:diskidx;i:lba;i:blocks");
     register_function("_elfload",elf_load,"_elfload(char diskletter,char* name) -> bool success");
     register_function("_img",img,"_img;c:diskletter;name. print image in fbcon");
+
+    // struct disk* testdisk = alloc(sizeof(struct disk));
+    // testdisk->size = 1024*1024*1024;
+    // testdisk->name = "test1";
+    // testdisk->mountletter=0;
+    // memset(testdisk->partitions,0,sizeof(void*)*MAX_PART_COUNT);
+    //
+    //
+    // struct disk* testdisk2 = alloc(sizeof(struct disk));
+    // testdisk2->size = 1024*1024*1024;
+    // testdisk2->name = "test2";
+    // testdisk2->mountletter=0;
+    // memset(testdisk2->partitions,0,sizeof(void*)*MAX_PART_COUNT);
+    // testdisk->partitions[0] = testdisk2;
+    //
+    // struct disk* testdisk3 = alloc(sizeof(struct disk));
+    // testdisk3->size = 1024*1024*1024;
+    // testdisk3->name = "test3";
+    // testdisk3->mountletter=0;
+    // memset(testdisk3->partitions,0,sizeof(void*)*MAX_PART_COUNT);
+    // testdisk2->partitions[0] = testdisk3;
+    //
+    // diskadd(testdisk);
+
+
 
     create_task("clitools thread",clitools);
 }

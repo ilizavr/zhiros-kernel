@@ -62,6 +62,7 @@ struct disk* ramdisk_init(i_ptr modulestart, i_ptr moduleend)
     newramdisk->name = "ramdisk";
     newramdisk->other_info = (void*)modulestart;
     newramdisk->mountletter=0;
+    memset(newramdisk->partitions,0,sizeof(void*)*MAX_PART_COUNT);
 
     if(!diskadd(newramdisk)) return 0;
     return newramdisk;

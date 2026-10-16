@@ -8,18 +8,23 @@
 #include "../../fonts/font_6x8.h"
 #include "../allocator.h"
 
-i_ptr fb_addr;
-u32 screen_width, screen_height, bpp, screen_pitch;
-bool stopcon = false;
+volatile i_ptr real_fb_addr;
+volatile i_ptr fb_addr;
+volatile u32 screen_width, screen_height, bpp, screen_pitch;
+volatile bool stopcon = false;
 
-u32 fb_size,fb_size_withoutlastline,fb_lastline_addr,fb_onelinesize,fb_secondline_addr;
+volatile u32 fb_size,fb_size_withoutlastline,fb_lastline_addr,fb_onelinesize,fb_secondline_addr;
+
 
 INLINE void put_pixel(u32 x, u32 y, u32 color) {
     if(stopcon) return;
+
     u32 *pixel = (u32*)(fb_addr + y * screen_pitch + x * bpp);
-    *pixel &= 0xFF000000;
-    if(bpp == 4)*pixel |= 0xFF000000;
-    *pixel |= color;
+    *pixel = color|0xFF000000;
+
+    u32 *realpixel = (u32*)(real_fb_addr + y * screen_pitch + x * bpp);
+    *realpixel = *pixel;
+
 }
 
 INLINE void put_sym(u8 sym, u32 startx, u32 starty,u32 color,u32 bgcolor)
@@ -55,17 +60,20 @@ INLINE void put_sym_nobg(u8 sym, u32 startx, u32 starty, u32 color)
 
 void init_fbcon(i_ptr _fb_addr, u32 _screen_width, u32 _screen_height, u32 _screen_pitch, u32 _bbp)
 {
-    fb_addr = _fb_addr;
+    real_fb_addr = _fb_addr;
+    fb_addr = 0x03000000; memset((void*)fb_addr, 0, fb_size);
     screen_width = _screen_width/7*7;
     screen_height = _screen_height/9*9;
     screen_pitch = _screen_pitch;
     bpp = _bbp / 8;
 
     fb_size = screen_pitch*screen_height;
+
     fb_size_withoutlastline = (screen_height-9)*screen_pitch;
     fb_lastline_addr = fb_addr+(screen_height-9)*screen_pitch;
     fb_onelinesize = screen_pitch*9;
     fb_secondline_addr = fb_addr+screen_pitch*9;
+
 }
 
 u32 curx=0, cury=0;
@@ -73,14 +81,17 @@ void clearframe() {
     if(stopcon) return;
     cury = 0;curx = 0;
     memset((void*)fb_addr, 0, fb_size);
+    memset((void*)real_fb_addr, 0, fb_size);
 }
 
 
 void roll_screen()
 {
     if(stopcon) return;
-    memmove((char*)fb_addr,(char*)fb_secondline_addr,fb_size_withoutlastline);
+    memcpy_wc((char*)fb_addr,(char*)fb_secondline_addr,fb_size_withoutlastline);
     memset((char*)fb_lastline_addr,0,fb_onelinesize);
+
+    memcpy_wc((void*)real_fb_addr,(void*)fb_addr, fb_size);
 }
 
 void putchar_color(char chr, u32 color)
@@ -107,6 +118,7 @@ void putchar_color(char chr, u32 color)
     if(chr == '\n')
     {
         put_sym_nobg(' ',curx,cury,color);
+        // memcpy_wc((void*)(real_fb_addr + cury * screen_pitch), (void*)(fb_addr + cury * screen_pitch), fb_onelinesize);
 
         cury+=9;
         curx=0;
@@ -119,6 +131,8 @@ void putchar_color(char chr, u32 color)
     }
 
     put_sym_nobg(chr,curx,cury,color);
+
+    // memcpy_wc((void*)(real_fb_addr + cury * screen_pitch), (void*)(fb_addr + cury * screen_pitch), fb_onelinesize);
     curx+=7;
 }
 
@@ -182,7 +196,8 @@ void fbcon_resume()
 struct fb_info* getfb()
 {
     struct fb_info *ret = kalloc(sizeof(struct fb_info));
-    ret->fb_addr = fb_addr;
+    ret->fb_addr = real_fb_addr;
+    ret->shadow_fb_addr = fb_addr;
     ret->screen_width = screen_width;
     ret->screen_height = screen_height;
     ret->screen_pitch = screen_pitch;

@@ -6,6 +6,7 @@
 
 #include "allocator.h"
 #include "panic.h"
+#include "printf.h"
 
 extern char _kernel_end[];
 extern char _kernel_start[];
@@ -22,8 +23,8 @@ PAK struct memoryblock
     struct memoryblock *next;
 };
 
-struct memoryblock headblock = {0,1,0,0};
-struct memoryblock *footblock = &headblock;
+volatile struct memoryblock headblock = {0,1,0,0};
+volatile struct memoryblock *footblock = &headblock;
 
 
 void *kalloc(u32 size)
@@ -60,7 +61,7 @@ void *kalloc(u32 size)
 }
 
 
-bool free(void *addr)
+bool free(void *addr)//FIXME: anti fragmentation
 {
     u32 eflags = save_irq();
     if(!addr) {
@@ -74,26 +75,28 @@ bool free(void *addr)
     }
     block->allocated = 0;
 
-    if((i_ptr)block->next == ((i_ptr)block+block->size+sizeof(struct memoryblock)) && block->next->allocated == 0)
-    {
-        block->size+=block->next->size+sizeof(struct memoryblock);
-        if(block->next->next)block->next->next->prev = block;
-        block->next=block->next->next;
-    }
-    if(block->prev&&block->prev->allocated == 0)
-    {
-        block=block->prev;
-
-        if((i_ptr)block->next != ((i_ptr)block+block->size+sizeof(struct memoryblock))) goto END;
-
-        block->size+=block->next->size+sizeof(struct memoryblock);
-        if(block->next->next)block->next->next->prev = block;
-        block->next=block->next->next;
-    }
+    // if((i_ptr)block->next == ((i_ptr)block+block->size+sizeof(struct memoryblock)) && block->next->allocated == 0)
+    // {
+    //     block->size+=block->next->size+sizeof(struct memoryblock);
+    //     if(block->next->next)block->next->next->prev = block;
+    //     block->next=block->next->next;
+    // }
+    // if(block->prev&&block->prev->allocated == 0)
+    // {
+    //     block=block->prev;
+    //
+    //     if((i_ptr)block->next != ((i_ptr)block+block->size+sizeof(struct memoryblock))) goto END;
+    //
+    //     block->size+=block->next->size+sizeof(struct memoryblock);
+    //     if(block->next->next)block->next->next->prev = block;
+    //     block->next=block->next->next;
+    // }
 END:
     restore_irq(eflags);
     return true;
 }
+
+volatile i_ptr memory = 0;
 
 void _allocator_add_page(i_ptr start, i_ptr end)
 {
@@ -111,6 +114,8 @@ void _allocator_add_page(i_ptr start, i_ptr end)
     footblock->next->next = 0;
 
     footblock = footblock->next;
+
+    memory += size;
 }
 
 void allocator_add_page(i_ptr start, i_ptr end, i_ptr modulestart, i_ptr moduleend)
@@ -136,9 +141,15 @@ void allocator_add_page(i_ptr start, i_ptr end, i_ptr modulestart, i_ptr modulee
         if (end > moduleend) allocator_add_page(moduleend, end, modulestart, moduleend);
         return;
     }
+    if (start < 0x04000000 && end > 0x02000000) { //for elfloader and fbcon shadow buffer
+        if (start < 0x02000000) allocator_add_page(start, 0x02000000, modulestart, moduleend);
+        if (end > 0x04000000) allocator_add_page(0x04000000, end, modulestart, moduleend);
+        return;
+    }
 
     _allocator_add_page(start,end);
 }
+
 
 i_ptr get_available_memory()
 {
@@ -155,3 +166,25 @@ i_ptr get_available_memory()
     restore_irq(eflags);
     return available_memory;
 }
+
+i_ptr get_used_memory()
+{
+    return memory-get_available_memory();
+}
+
+// void debug_heap()
+// {
+//     i_ptr available_memory = 0;
+//     u32 eflags = save_irq();
+//     struct memoryblock *current = headblock.next;
+//
+//     for(int i = 0;current;i++)
+//     {
+//         printf("%u. free block %x-%x(size %u)\n",i,current,(i_ptr)current+current->size,current->size);
+//         available_memory += current->size;
+//         current = current->next;
+//     }
+//
+//     restore_irq(eflags);
+//     printf("free memory:%u. used memory:%u\n",available_memory,memory-available_memory);
+// }

@@ -4,7 +4,7 @@
  */
 
 #define EI_NIDENT 16
-#define ELF_MAGIC 0x464C457FU
+#define ELF_MAGIC 0x464C457FU//\x7FELF
 #define PT_LOAD   1
 
 struct elf32_hdr {
@@ -44,11 +44,6 @@ static bool elf_load(char diskletter, char *name)
     }
 
     int size = f->getsize(f);
-    if (size >= 0x10000) {
-        LOGE("file too big");
-        f->close(f);
-        return false;
-    }
 
     u8 *file_buf = (u8 *)alloc(size);
     f->read(f, file_buf, size, 0);
@@ -65,7 +60,13 @@ static bool elf_load(char diskletter, char *name)
     struct elf32_phdr *phdr = (struct elf32_phdr *)(file_buf + header->e_phoff);
     for (u16 i = 0; i < header->e_phnum; i++) {
         if (phdr[i].p_type == PT_LOAD) {
-            if((phdr[i].p_vaddr+phdr[i].p_filesz)>0x100000)
+            if((phdr[i].p_vaddr+phdr[i].p_filesz)>0x03000000)
+            {
+                LOGE("ELF file have invalid load address");
+                free(file_buf);
+                return false;
+            }
+            if(phdr[i].p_vaddr<0x02000000)
             {
                 LOGE("ELF file have invalid load address");
                 free(file_buf);

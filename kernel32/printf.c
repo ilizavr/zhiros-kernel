@@ -43,6 +43,24 @@ void printf(char *fmt, ...)
                 print_hex(num);
                 break;
             }
+            case 'Z':{
+                u64 num = va_arg(args, u32);
+                if(num>=_1M) {
+                    print_int(num>>20);
+                    putchar('G');
+                    break;
+                }
+                if(num>=_1K) {
+                    print_int(num>>10);
+                    putchar('M');
+                    break;
+                }
+
+                print_int(num);
+                putchar('k');
+
+                break;
+            }
             case '%':{
                 putchar('%');
                 break;

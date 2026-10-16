@@ -19,11 +19,28 @@
 
 char ramdisk_letter;
 
+extern char _kernel_end[];
+extern char _kernel_start[];
+
 void init()
 {
     LOGI("starting initialization script");
     #include "../init.h"
 }
+
+void init_sse() {
+    uint32_t cr4, cr0;
+
+    asm volatile("mov %%cr4, %0" : "=r"(cr4));
+    cr4 |= (1 << 9); // OSFXSR
+    asm volatile("mov %0, %%cr4" : : "r"(cr4));
+
+    asm volatile("mov %%cr0, %0" : "=r"(cr0));
+    cr0 &= ~(1 << 2); // EM
+    cr0 |= (1 << 1);  // MP
+    asm volatile("mov %0, %%cr0" : : "r"(cr0));
+}
+
 
 void main(i_ptr addr, u32 magic)
 {
@@ -55,6 +72,8 @@ void main(i_ptr addr, u32 magic)
 
     if(!fb_tag) return;
 
+    init_sse();
+
     init_fbcon(fb_tag->framebuffer_addr, fb_tag->framebuffer_width, fb_tag->framebuffer_height, fb_tag->framebuffer_pitch, fb_tag->framebuffer_bpp);
     LOGI("fbcon inited");
 
@@ -67,7 +86,7 @@ void main(i_ptr addr, u32 magic)
         kernel_panic_text("Multiboot not give mmap!");
     }
 
-    LOGI("module loaded at 0x%x-0x%x",module_tag->mod_start,module_tag->mod_end);
+    LOGI("ramdisk loaded at 0x%x-0x%x",module_tag->mod_start,module_tag->mod_end);
 
     pic_remap();
     init_idt();
@@ -83,7 +102,8 @@ void main(i_ptr addr, u32 magic)
         }
         entry = (void*)entry + mmap_tag->entry_size;
     }
-    LOGI("allocator inited. memory available: %uM",get_available_memory()>>20);
+    LOGI("allocator inited. allocated for elfloader: 16M\n                      allocated for fbcon: 16M\n                      allocated for ramdisk: %Z\n                      allocated for kernel %Z\n                      heap size: %Z",(module_tag->mod_end-module_tag->mod_start)>>10,((i_ptr)_kernel_end-(i_ptr)_kernel_start)>>10,get_available_memory()>>10);
+
 
     struct disk* ramdisk = ramdisk_init(module_tag->mod_start,module_tag->mod_end);
 
@@ -108,6 +128,7 @@ void main(i_ptr addr, u32 magic)
     register_function("_alloc",kalloc,"_alloc(u32 size) -> void* buf");
     register_function("_free",free,"_free(void* buf) -> bool success");
     register_function("_getfree",get_available_memory,"_getfree() -> i_ptr freemem");
+    register_function("_getused",get_used_memory,"_getused() -> i_ptr usedmem");
     register_function("_hook_interrupt",hook_interrupt,"_hook_interrupt(u32 n, void* function) -> bool success");
     register_function("_diskadd",diskadd,"_diskadd(struct disk* dsk) -> bool success");
     register_function("_getdisk",getdisk,"_getdisk(int idx) -> struct disk*");
