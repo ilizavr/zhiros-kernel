@@ -32,7 +32,9 @@ static void drawimage(struct image*img,int startx,int starty)
 {
     for(int x = 0;x<img->width;x++)
         for(int y = 0;y<img->height;y++)
-            put_pixel(x+startx,y+starty,img->bytes[y*img->width+x]);
+            for(int dx = 0;dx<fb->font_scale;dx++)
+                for(int dy = 0;dy<fb->font_scale;dy++)
+                    put_pixel((x*fb->font_scale+dx)/2+startx,(y*fb->font_scale+dy)/2+starty,img->bytes[y*img->width+x]);
 }
 
 static void cpuid(u32 code, u32*a, u32*b, u32*c, u32*d)
@@ -89,7 +91,7 @@ static struct object * fetch(struct objectArray* args)
     for(int i = logo_img->height/9-5;i>=0;i--)printf("\n");
 
     fb = getfb();
-    drawimage(logo_img, fb->curx, fb->cury - logo_img->height);
+    drawimage(logo_img, 0, fb->cury - logo_img->height*fb->font_scale/2);
 
     logo->close(logo);
     free(fb);

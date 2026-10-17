@@ -8,6 +8,7 @@ static void (*printf)(...);
 static void (*clearframe)();
 static struct fb_info* (*fbcon_stop)();
 static struct fb_info* (*getfb)();
+static void (*set_font_scale)(u32 scale);
 
 static bool* (*get_key_state_matrix)();
 static int (*gets)(char* string, int max_size);
@@ -51,6 +52,7 @@ static inline void api_init(void* (*_resolve_function)(char* name)) {
     clearframe = _resolve_function("_clearframe");
     fbcon_stop = _resolve_function("_fbcon_stop");
     getfb = _resolve_function("_getfb");
+    set_font_scale = _resolve_function("_set_font_scale");
 
     get_key_state_matrix = _resolve_function("_get_key_state_matrix");
     gets = _resolve_function("_gets");

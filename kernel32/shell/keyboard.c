@@ -66,18 +66,18 @@ u32 gets(char *str, u32 maxlen)
         char chr = getchar();
 
         if(chr == '\n') {
-            putchar(chr);
+            printf("%c",chr);
             break;
         }
         if(chr == '\b')
         {
             if(i>0){
-                print("\b  \b\b");
+                printf("\b  \b\b");
                 i--;
             }
             continue;
         }
-        putchar(chr);
+        printf("%c",chr);
         str[i++] = chr;
     }
     str[i] = 0;

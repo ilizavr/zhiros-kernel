@@ -20,22 +20,22 @@ struct object * printlinkerlist(struct objectArray* args)
     {
         if(current->name[0] == '_') {current=current->next; continue;}
         print_color(current->name,0xAAAAFF);
-        for(int i = strlen(current->name);i<32;i++)putchar(' ');
+        for(int i = strlen(current->name);i<32;i++)printf(" ");
         print_color(current->description,0x00FFFF);
-        putchar('\n');
+        printf("\n");
 
         current=current->next;
     }
-    putchar('\n');
+    printf("\n");
 
     current = get_linker_head();
     while(current)
     {
         if(current->name[0] != '_') {current=current->next; continue;}
         print_color(current->name,0x00FFAA);
-        for(int i = strlen(current->name);i<32;i++)putchar(' ');
+        for(int i = strlen(current->name);i<32;i++)printf(" ");
         print_color(current->description,0x00FFFF);
-        putchar('\n');
+        printf("\n");
 
         current=current->next;
     }

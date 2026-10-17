@@ -134,6 +134,7 @@ void main(i_ptr addr, u32 magic)
     register_function("_getdisk",getdisk,"_getdisk(int idx) -> struct disk*");
     register_function("_fbcon_stop",fbcon_stop,"_fbcon_stop() -> struct fb_info*");
     register_function("_getfb",getfb,"_getfb() -> struct fb_info*");
+    register_function("_set_font_scale",set_font_scale,"_set_font_scale(u32 size) -> None");
     register_function("_mount",mount,"_mount(struct disk* dsk, void * open_fnc, void* mkdir_fnc) -> char diskletter");
     register_function("_open",open,"_open(char diskletter, char* path) -> struct file*");
     register_function("_mkdir",open,"_mkdir(char diskletter, char* path) -> struct file*");

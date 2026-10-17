@@ -34,6 +34,7 @@ typedef unsigned int i_ptr;
 #define HLT() asm volatile("hlt") //deprecated, use _yield
 #define STI() asm volatile("sti")
 #define CLI() asm volatile("cli")
+#define NEW(type, name) type* n = alloc(sizeof(type)); memset(n,0,sizeof(type))
 
 #define OBJECT_STRING 0
 
@@ -100,6 +101,7 @@ struct fb_info
     u32 cury;
 
     i_ptr shadow_fb_addr;
+    u32 font_scale;
 };
 
 struct disk

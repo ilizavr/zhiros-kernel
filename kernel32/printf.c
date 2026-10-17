@@ -7,6 +7,8 @@
 #include "printf.h"
 #include "shell/fbcon.h"
 
+volatile u32 printfcolor = 0xAAAAAA;
+
 void printf(char *fmt, ...)
 {
     va_list args;
@@ -15,7 +17,7 @@ void printf(char *fmt, ...)
     for(;*fmt;fmt++)
     {
         if(*fmt != '%'){
-            putchar(*fmt);
+            putchar_color(*fmt,printfcolor);
             continue;
         }
 
@@ -25,49 +27,57 @@ void printf(char *fmt, ...)
         switch (*fmt){
             case 's':{
                 char *str = va_arg(args, char*);
-                if(str) print(str);
+                if(str) print_color(str,printfcolor);
                 break;
             }
             case 'c':{
                 u32 chr = va_arg(args, u32);
-                putchar(chr&0xFF);
+                putchar_color(chr&0xFF,printfcolor);
+                break;
+            }
+            case 'C':{
+                printfcolor = va_arg(args, u32);
                 break;
             }
             case 'u':{
                 u32 num = va_arg(args, u32);
-                print_int(num);
+                print_int(num,printfcolor);
                 break;
             }
             case 'x':{
                 u32 num = va_arg(args, u32);
-                print_hex(num);
+                print_hex(num,printfcolor);
                 break;
             }
             case 'Z':{
-                u64 num = va_arg(args, u32);
+                u32 num = va_arg(args, u32);
                 if(num>=_1M) {
-                    print_int(num>>20);
-                    putchar('G');
+                    print_int(num/1000000,printfcolor);
+                    putchar_color('.',printfcolor);
+                    print_int(num/100000%10,printfcolor);
+                    putchar_color('G',printfcolor);
                     break;
                 }
                 if(num>=_1K) {
-                    print_int(num>>10);
-                    putchar('M');
+                    print_int(num/1000,printfcolor);
+                    putchar_color('.',printfcolor);
+                    print_int(num/100%10,printfcolor);
+                    putchar_color('M',printfcolor);
                     break;
                 }
 
-                print_int(num);
-                putchar('k');
+                print_int(num,printfcolor);
+                putchar_color('k',printfcolor);
 
                 break;
             }
             case '%':{
-                putchar('%');
+                putchar_color('%',printfcolor);
                 break;
             }
             default:{
-                putchar('%');
-                putchar(*fmt);
+                putchar_color('%',printfcolor);
+                putchar_color(*fmt,printfcolor);
                 break;
             }
         }

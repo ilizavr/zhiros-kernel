@@ -61,7 +61,7 @@ void set_idt_gate(u8 num,void* fnc)
 	u32 base = (u32)fnc;
 	idt[num].low_offset = base&0xFFFF;
 	idt[num].high_offset = (base>>16)&0xFFFF;
-	idt[num].sel = 0x10;
+	idt[num].sel = 0x8;
 	idt[num].always0 = 0;
 	idt[num].flags = 0x8E;//ring0 32bit
 }

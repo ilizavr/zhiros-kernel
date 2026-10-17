@@ -15,6 +15,19 @@ volatile bool stopcon = false;
 
 volatile u32 fb_size,fb_size_withoutlastline,fb_lastline_addr,fb_onelinesize,fb_secondline_addr;
 
+volatile u32 fb_scale = 2;
+
+void set_font_scale(u32 scale) {
+    scale++;
+    if (scale < 2 || scale > 6) scale = 2;
+    fb_scale = scale;
+
+    fb_size_withoutlastline = (screen_height - 9*fb_scale/2) * screen_pitch;
+    fb_lastline_addr = fb_addr + (screen_height - 9*fb_scale/2) * screen_pitch;
+    fb_onelinesize = screen_pitch * 9*fb_scale/2;
+    fb_secondline_addr = fb_addr + screen_pitch * 9*fb_scale/2;
+}
+
 
 INLINE void put_pixel(u32 x, u32 y, u32 color) {
     if(stopcon) return;
@@ -35,10 +48,15 @@ INLINE void put_sym(u8 sym, u32 startx, u32 starty,u32 color,u32 bgcolor)
         u8 font_row = font6x8[sym*8+y];
         for(int x = 0;x<6;x++)
         {
+            u32 col = bgcolor;
             if(font_row&0b10000000)
-                put_pixel(startx+x,starty+y,color);
-            else
-                put_pixel(startx+x,starty+y,bgcolor);
+                col = color;
+
+            for (u32 dy = 0; dy < fb_scale; dy++) {
+                for (u32 dx = 0; dx < fb_scale; dx++) {
+                    put_pixel(startx + (x * fb_scale + dx)/2, starty + (y * fb_scale + dy)/2, col);
+                }
+            }
 
             font_row<<=1;
         }
@@ -47,21 +65,13 @@ INLINE void put_sym(u8 sym, u32 startx, u32 starty,u32 color,u32 bgcolor)
 INLINE void put_sym_nobg(u8 sym, u32 startx, u32 starty, u32 color)
 {
     if (stopcon) return;
-    for (int y = 0; y < 8; y++)
-    {
-        u8 font_row = font6x8[sym * 8 + y];
-        for (int x = 6; x >= 0; x--)
-        {
-            put_pixel(startx + x, starty + y, (font_row&1)*color);
-            font_row >>= 1;
-        }
-    }
+    put_sym(sym,startx, starty,color,0);
 }
 
 void init_fbcon(i_ptr _fb_addr, u32 _screen_width, u32 _screen_height, u32 _screen_pitch, u32 _bbp)
 {
     real_fb_addr = _fb_addr;
-    fb_addr = 0x03000000; memset((void*)fb_addr, 0, fb_size);
+    fb_addr = 0x03000000;
     screen_width = _screen_width/7*7;
     screen_height = _screen_height/9*9;
     screen_pitch = _screen_pitch;
@@ -74,6 +84,7 @@ void init_fbcon(i_ptr _fb_addr, u32 _screen_width, u32 _screen_height, u32 _scre
     fb_onelinesize = screen_pitch*9;
     fb_secondline_addr = fb_addr+screen_pitch*9;
 
+    clearframe();
 }
 
 u32 curx=0, cury=0;
@@ -96,21 +107,24 @@ void roll_screen()
 
 void putchar_color(char chr, u32 color)
 {
+    u32 char_w = 7 * fb_scale /2;
+    u32 char_h = 9 * fb_scale /2;
+
     if(stopcon) return;
-    if((curx+6)>screen_width)
+    if((curx+char_w-1)>screen_width)
     {
-        cury+=9;
+        cury+=char_h;
         curx=0;
 
-        if((cury+9)>screen_height) {
+        if((cury+char_h)>screen_height) {
             roll_screen();
-            cury = screen_height-9;
+            cury = screen_height-char_h;
         }
     }
     if(chr == '\b')
     {
-        if(curx>=7)curx-=7;
-        else if(cury>=9){curx=screen_width-7;cury-=9;}
+        if(curx>=char_w)curx-=char_w;
+        else if(cury>=char_h){curx=screen_width-char_w;cury-=char_h;}
         return;
     }
 
@@ -120,12 +134,12 @@ void putchar_color(char chr, u32 color)
         put_sym_nobg(' ',curx,cury,color);
         // memcpy_wc((void*)(real_fb_addr + cury * screen_pitch), (void*)(fb_addr + cury * screen_pitch), fb_onelinesize);
 
-        cury+=9;
+        cury+=char_h;
         curx=0;
 
-        if((cury+9)>screen_height) {
+        if((cury+char_h)>screen_height) {
             roll_screen();
-            cury = screen_height-9;
+            cury = screen_height-char_h;
         }
         return;
     }
@@ -133,14 +147,14 @@ void putchar_color(char chr, u32 color)
     put_sym_nobg(chr,curx,cury,color);
 
     // memcpy_wc((void*)(real_fb_addr + cury * screen_pitch), (void*)(fb_addr + cury * screen_pitch), fb_onelinesize);
-    curx+=7;
+    curx+=char_w;
 }
 
-void putchar(char chr)
-{
-    if(stopcon) return;
-    putchar_color(chr, 0xAAAAAA);
-}
+// void putchar(char chr)
+// {
+//     if(stopcon) return;
+//     putchar_color(chr, 0xAAAAAA);
+// }
 
 void print_color(char *str, u32 color)
 {
@@ -152,13 +166,13 @@ void print_color(char *str, u32 color)
     }
 }
 
-void print(char *str)
-{
-    if(stopcon) return;
-    print_color(str,0xAAAAAA);
-}
+// void print(char *str)
+// {
+//     if(stopcon) return;
+//     print_color(str,0xAAAAAA);
+// }
 
-void print_hex(u32 num)
+void print_hex(u32 num,u32 color)
 {
     if(stopcon) return;
     char buffer[12]; buffer[11] = '\0';buffer[10] = '0';
@@ -171,10 +185,10 @@ void print_hex(u32 num)
         else buffer[i] = nn-0xa+'A';
         num>>=4;
     }
-    print(buffer+i+1);
+    print_color(buffer+i+1,color);
 }
 
-void print_int(u32 num)
+void print_int(u32 num,u32 color)
 {
     if(stopcon) return;
     char buffer[12]; buffer[11] = '\0';buffer[10] = '0';
@@ -186,7 +200,7 @@ void print_int(u32 num)
         num/=10;
     }
 
-    print(buffer+i+1);
+    print_color(buffer+i+1,color);
 }
 void fbcon_resume()
 {
@@ -204,6 +218,7 @@ struct fb_info* getfb()
     ret->bpp = bpp;
     ret->curx = curx;
     ret->cury = cury;
+    ret->font_scale = fb_scale;
     return ret;
 }
 struct fb_info* fbcon_stop()
@@ -212,5 +227,4 @@ struct fb_info* fbcon_stop()
 
     return getfb();
 }
-
 

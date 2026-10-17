@@ -79,13 +79,13 @@ void print_bear()
     for(int i = 0;i<12;i++) {
         print_color(sadbear[i],0xFF5500);
         if(i<11){
-            for(int j = strlen(sadbear[i]);j<24;j++)print(" ");
+            for(int j = strlen(sadbear[i]);j<24;j++)printf(" ");
             if(i>5) print_color(panic_text[i],0xFF0000);
-            else print(panic_text[i]);
+            else printf(panic_text[i]);
         }
-        print("\n");
+        printf("\n");
     }
-    print("\n");
+    printf("\n");
 }
 
 
