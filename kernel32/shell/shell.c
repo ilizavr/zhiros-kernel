@@ -12,7 +12,6 @@
 
 #define MAX_ARGS 4
 
-
 struct object * printlinkerlist(struct objectArray* args)
 {
     struct function_info * current = get_linker_head();
@@ -42,21 +41,24 @@ struct object * printlinkerlist(struct objectArray* args)
     return 0;
 }
 
+void (*custom_gets)(char * buf, u32 maxlen) = 0;
 
 void start_shell()
 {
     register_function("help",printlinkerlist,"print all functions in linker list");
 
-
     printf("debug shell\n");
     while(true)
     {
+        if(!custom_gets) custom_gets = resolve_function("_custom_gets");
+
         i_ptr args[MAX_ARGS];
         u32 current_arg = 0;
 
         char buffer[256];
         print_color("\x1A",0xFF0000);
-        gets(buffer,256);
+        if(custom_gets) custom_gets(buffer, 256);
+        else gets(buffer, 256);
 
         if(!strlen(buffer)){
             continue;
@@ -64,7 +66,6 @@ void start_shell()
 
         char d[] = ";";
         char * token = strtok(buffer,d);
-
 
         if(token[0] == '*')
         {
