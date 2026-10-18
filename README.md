@@ -42,7 +42,7 @@
 - windowmanager+zhirGL - разработка ведется - https://github.com/TINERKOTL/zhiros-module-example
 - zhir-vm(jit vm для memorysafe языка) - разработка ведется - https://github.com/bust6k/ZhirVM
 - ide-driver, fat16 - скоро
-- network - скоро
+- network - https://github.com/ukdaemonz/zhiros-kernel
 - unixbox(слой совместимости для unix-подобных программ) - в планах
 
 ## нейросети и вайбкодинг
