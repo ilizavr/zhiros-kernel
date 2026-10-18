@@ -34,7 +34,11 @@ typedef unsigned int i_ptr;
 #define HLT() asm volatile("hlt") //deprecated, use _yield
 #define STI() asm volatile("sti")
 #define CLI() asm volatile("cli")
-#define NEW(type, name) type* n = alloc(sizeof(type)); memset(n,0,sizeof(type))
+#define NEW(type, name) type* name = alloc(sizeof(type)); memset(name,0,sizeof(type))
+#define APICALL(name,...) do { \
+    void* fffff = resolve_function(name); \
+    if(fffff) ((void(*)(...))fffff)(__VA_ARGS__); \
+} while(0)
 
 #define OBJECT_STRING 0
 

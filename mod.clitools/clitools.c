@@ -153,18 +153,22 @@ static void dumpmem(void* addr, i_ptr size)
     }
     hexdump(addr,size);
 }
-static void dumpdisk(u32 idx, u32 lba, u32 blocks)
+static void dumpdisk(u32 diskidx, u32 lba, u32 blocks)
 {
+    struct disk *d = (struct disk *)diskidx;
+    if(diskidx<MAX_DISK_COUNT)d = getdisk(diskidx);
+
+    if(!d)
+    {
+        LOGE("disk not found!");
+        return;
+    }
+
     if(blocks>32)
     {
         LOGW("many blocks. continue?");
         char chr = getchar();
         if(chr!='y') return;
-    }
-    struct disk* d = getdisk(idx);
-    if(!d){
-        LOGE("disk not found");
-        return;
     }
 
     void *buf = alloc(blocks*512);
@@ -233,7 +237,7 @@ static void print_tree(struct disk*d, u32 depth)
 
     printf("%s",d->name);
     for(int i = (strlen(d->name)+depth*2);i<18;i++) printf(" ");
-    printf("%c       %Z\n",d->mountletter,((u64)d->size)>>1);
+    printf("%c       %Z    0x%x\n",d->mountletter,d->size>>1, d);
 
     for(int i = 0;i<MAX_PART_COUNT;i++)
     {
@@ -245,7 +249,7 @@ static void print_tree(struct disk*d, u32 depth)
 
 static struct object* lsblk(struct objectArray* args)
 {
-    printf("NAME              MOUNT   SIZE\n");
+    printf("NAME              MOUNT   SIZE   STRUCT_DISK_ADDR\n");
 
     for(int i = 0;i<MAX_DISK_COUNT;i++)
     {

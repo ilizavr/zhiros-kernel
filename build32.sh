@@ -6,7 +6,7 @@ rm -rf build/
 mkdir build
 mkdir ramdisk
 
-FLAGS="-m32 -Wint-conversion -nostdlib -fno-pie -no-pie -fno-stack-protector -ffreestanding -O1 -Wall -Wextra -Wno-unused-function -Wno-unused-variable -Wno-div-by-zero"
+FLAGS="-m32 -Wint-conversion -nostdlib -fno-pie -no-pie -fno-stack-protector -ffreestanding -O1 -w"
 MODULE_FLAGS="$FLAGS -fPIC -fno-common"
 ELF_MOD_FLAGS="$FLAGS -T ld/elf.ld"
 
@@ -38,9 +38,15 @@ ld -m elf_i386 -T kernel32/linker.ld -o iso/boot/kernel.bin build/kernel_asm.o b
 #compile modules
 build_module mod.clitools/clitools.c ramdisk/clitools.mod
 build_module mod.drivers/mouse.c ramdisk/mouse.mod
+build_module mod.drivers/bios_disk_driver.c ramdisk/bios_disk_driver.mod
+build_module mod.drivers/mbr_scan.c ramdisk/mbr.mod
 build_module mod.games/pong.c ramdisk/pong.mod
 build_module mod.examples/hello_mod.c ramdisk/hello.mod
 gcc $ELF_MOD_FLAGS mod.examples/hello_elf.c -o ramdisk/hello.elf
+
+#bios disk driver 16bit blob
+nasm mod.drivers/bios.asm -o ramdisk/bios.bin
+
 
 #create ramdisk image
 tar --format=ustar -cf iso/boot/initrd.img -C ramdisk/ .

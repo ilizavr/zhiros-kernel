@@ -49,6 +49,7 @@ void main(i_ptr addr, u32 magic)
     struct multiboot_tag_framebuffer_common *fb_tag = 0;
     struct multiboot_tag_mmap *mmap_tag = 0;
     struct multiboot_tag_module *module_tag = 0;
+    struct multiboot_tag_string *bootloader_name = 0;
 
     struct multiboot_tag* tag = (struct multiboot_tag*)(addr+8);
 
@@ -67,6 +68,9 @@ void main(i_ptr addr, u32 magic)
             case MULTIBOOT_TAG_TYPE_MODULE:
                 module_tag = (void*)tag;
                 break;
+            case MULTIBOOT_TAG_TYPE_BOOT_LOADER_NAME:
+                bootloader_name = (void*)tag;
+                break;
         }
     }
 
@@ -76,6 +80,7 @@ void main(i_ptr addr, u32 magic)
 
     init_fbcon(fb_tag->framebuffer_addr, fb_tag->framebuffer_width, fb_tag->framebuffer_height, fb_tag->framebuffer_pitch, fb_tag->framebuffer_bpp);
     LOGI("fbcon inited");
+    LOGI("bootloader name: %s",bootloader_name->string);
 
     if(!module_tag)
     {

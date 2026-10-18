@@ -79,6 +79,7 @@ INIT void init(void* (*_resolve_function)(char* name))
         outb(0x21,0);//enable pic
         outb(0xA1,0);
 
+        APICALL("_mbrscan",n);
         diskadd(n);
     }
     LOGI("disk driver inited. found %u disk",disks_count);
