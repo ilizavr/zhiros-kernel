@@ -52,4 +52,7 @@
 - написание тестов и review кода с помощью нейросетей РАЗРЕШЕНО
 
 ## screenshot
-<img width="1722" height="1283" alt="изображение" src="https://github.com/user-attachments/assets/2ef8da86-7482-4657-9ba9-c8f1829c6a75" />
+<img width="1197" height="900" alt="изображение" src="https://github.com/user-attachments/assets/be74022f-6286-475c-87e8-b1103b0c493e" />
+<img width="1200" height="901" alt="изображение" src="https://github.com/user-attachments/assets/ce0b5e3f-428e-4d4e-8bf1-7a84cbf4fb97" />
+
+
