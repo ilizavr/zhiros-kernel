@@ -46,6 +46,8 @@ static bool bios_read_lba(struct disk* dsk, u32 lba, char* buffer, u32 blocks)
 
 INIT void init(void* (*_resolve_function)(char* name))
 {
+    bool mbrscan = false;
+
     api_init(_resolve_function);
 
     LOGW("bios disk driver is unstable. continue loading?(y/n)");
@@ -53,6 +55,11 @@ INIT void init(void* (*_resolve_function)(char* name))
     while(key=getchar()){
         if(key == 'y') break;
         if(key == 'n') return;
+    }
+    LOGW("use auto mbrscan?(y/n)");
+    while(key=getchar()){
+        if(key == 'y') { mbrscan=true; break; }
+        if(key == 'n') break;
     }
 
     bios_asm_header = (void*)0x7000;
@@ -79,7 +86,7 @@ INIT void init(void* (*_resolve_function)(char* name))
         outb(0x21,0);//enable pic
         outb(0xA1,0);
 
-        APICALL("_mbrscan",n);
+        if(mbrscan) APICALL("_mbrscan",n);
         diskadd(n);
     }
     LOGI("disk driver inited. found %u disk",disks_count);
