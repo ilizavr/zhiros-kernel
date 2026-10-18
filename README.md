@@ -37,12 +37,14 @@
 9. планировщик
 
 ## набор модулей:
-- clitools - готов
-- mouse-driver(NEUROSLOP) - готов
+- clitools - готов и интегрирован в этот репозиторий
+- mouse-driver(NEUROSLOP) - готов и интегрирован в этот репозиторий
+- bios disk driver - готов и интегрирован в этот репозиторий
+- mbr - готов и интегрирован в этот репозиторий
+- network - готов - https://github.com/ukdaemonz/zhiros-kernel
 - windowmanager+zhirGL - разработка ведется - https://github.com/TINERKOTL/zhiros-module-example
 - zhir-vm(jit vm для memorysafe языка) - разработка ведется - https://github.com/bust6k/ZhirVM
-- ide-driver, fat16 - скоро
-- network - https://github.com/ukdaemonz/zhiros-kernel
+- fat16 - скоро
 - unixbox(слой совместимости для unix-подобных программ) - в планах
 
 ## нейросети и вайбкодинг
