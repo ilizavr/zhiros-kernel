@@ -219,6 +219,7 @@ static void printfile(char diskletter, char* name)
     free(buffer);
 }
 
+
 static struct object* ps(struct objectArray* args)
 {
     struct task* tasks = get_tasks();
@@ -439,7 +440,72 @@ static u32 custom_gets(char *str, u32 maxlen)
     return len;
 }
 
+#include <stddef.h>
+#include <stdint.h>
 
+
+struct ustar_header {
+    char name[100];
+    char mode[8];
+    char uid[8];
+    char gid[8];
+    char size[12];
+    char mtime[12];
+    char checksum[8];
+    char typeflag;
+    char linkname[100];
+    char magic[6];
+    char version[2];
+    char uname[32];
+    char gname[32];
+    char devmajor[8];
+    char devminor[8];
+    char prefix[155];
+    char pad[12];
+} __attribute__((packed));
+
+static u32 parse_octal(const char *str, size_t size) {
+    u32 val = 0;
+    for (size_t i = 0; i < size; i++) {
+        char c = str[i];
+        if (c == '\0' || c == ' ') {
+            break;
+        }
+        if (c >= '0' && c <= '7') {
+            val = (val << 3) | (c - '0');
+        }
+    }
+    return val;
+}
+
+static void printramdisk()
+{
+    struct disk* rd = getdisk(0);
+    if (!rd) return;
+
+    struct ustar_header hdr;
+    u32 lba = 0;
+
+    while (1) {
+        rd->lba_read(rd, lba, (char*)&hdr, 1);
+
+        if (hdr.name[0] == '\0') {
+            break;
+        }
+
+        u32 size = parse_octal(hdr.size, 11);
+
+        if(hdr.typeflag == '5') printf("%C", 0x0088FF);
+
+        char *ext = hdr.name+strlen(hdr.name)-4;
+        if(!strcmp(ext,".mod")||!strcmp(ext,".elf")) printf("%C", 0x00FF88);
+        printf("%s%C\n", hdr.name,0xAAAAAA);
+
+        u32 sectors = (size + 511) / 512;
+
+        lba += 1 + sectors;
+    }
+}
 
 INIT void init(void* (*_resolve_function)(char* name))
 {
@@ -452,6 +518,8 @@ INIT void init(void* (*_resolve_function)(char* name))
     register_function("cls",cls,"clear screen");
     register_function("ps",ps,"proccess list");
     register_function("lsblk",lsblk,"print all disk");
+    register_function("lsrd",printramdisk,"print ramdisk");
+
     register_function("_pf",printfile,"print file. use _pf;c:diskletter;name");
     register_function("_dmp",dumpmem,"hexdump ram. _dmp;i:0xaddr;i:size");
     register_function("_dmpdsk",dumpdisk,"hexdump disk. _dmpdsk;i:diskidx;i:lba;i:blocks");
