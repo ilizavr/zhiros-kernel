@@ -5,6 +5,7 @@
 
 static void (*print_color)(char *string, u32 color);
 static void (*printf)(...);
+static void (*putchar_color)(char chr, u32 color);
 static void (*clearframe)();
 static struct fb_info* (*fbcon_stop)();
 static struct fb_info* (*getfb)();
@@ -42,12 +43,15 @@ static void (*yield)();
 static struct task* (*get_tasks)();
 static struct task* (*create_task)(char * name, void* function);
 
+static void (*exec_line)(char* cmd);
+
 static inline void api_init(void* (*_resolve_function)(char* name)) {
     if (!_resolve_function) return;
 
     resolve_function = _resolve_function;
 
     print_color = _resolve_function("_print_color");
+    putchar_color = _resolve_function("_putchar_color");
     printf = _resolve_function("_printf");
     clearframe = _resolve_function("_clearframe");
     fbcon_stop = _resolve_function("_fbcon_stop");
@@ -84,6 +88,8 @@ static inline void api_init(void* (*_resolve_function)(char* name)) {
     yield = _resolve_function("_yield");
     get_tasks = _resolve_function("_get_tasks");
     create_task = _resolve_function("_create_task");
+
+    exec_line = _resolve_function("_exec_line");
 }
 
 #endif

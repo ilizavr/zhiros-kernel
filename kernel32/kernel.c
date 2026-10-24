@@ -130,6 +130,7 @@ void main(i_ptr addr, u32 magic)
     register_function("_getchar",getchar,"_getchar() -> char sym");
     register_function("_get_key_state_matrix",get_key_state_matrix,"_get_key_state_matrix() -> bool key_state_matrix[256]");
     register_function("_print_color",print_color,"_print_color(char *string, u32 color) -> None");
+    register_function("_putchar_color",putchar_color,"_putchar_color(char chr, u32 color) -> None");
     register_function("_alloc",kalloc,"_alloc(u32 size) -> void* buf");
     register_function("_free",free,"_free(void* buf) -> bool success");
     register_function("_getfree",get_available_memory,"_getfree() -> i_ptr freemem");
@@ -153,6 +154,7 @@ void main(i_ptr addr, u32 magic)
     register_function("_yield",yield,"_yield() -> None");
     register_function("_get_tasks",get_tasks,"_get_tasks() -> struct task*");
     register_function("_kill",kill,"_kill() -> bool success");
+    register_function("_exec_line",exec_line,"_exec_line(char* command)");
     //register_function("_set_preemptive_mode",set_preemptive_mode,"_set_preemptive_mode(bool e) -> None");
 
     LOGI("kernel api registred");

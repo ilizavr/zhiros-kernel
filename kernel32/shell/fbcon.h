@@ -7,9 +7,7 @@ extern void init_fbcon(i_ptr _fb_addr, u32 _screen_width, u32 _screen_height, u3
 extern void clearframe();
 #define CLS clearframe
 extern void putchar_color(char chr, u32 color);
-// extern void putchar(char chr);
 extern API void print_color(char *str, u32 color);
-// extern void print(char *str);
 extern void print_hex(u32 num,u32 color);
 extern void print_int(u32 num,u32 color);
 extern API struct fb_info* fbcon_stop();

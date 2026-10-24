@@ -150,13 +150,7 @@ void putchar_color(char chr, u32 color)
     curx+=char_w;
 }
 
-// void putchar(char chr)
-// {
-//     if(stopcon) return;
-//     putchar_color(chr, 0xAAAAAA);
-// }
-
-void print_color(char *str, u32 color)
+O0 void print_color(char *str, u32 color)
 {
     if(stopcon) return;
     int len = strlen(str);
@@ -165,12 +159,6 @@ void print_color(char *str, u32 color)
         putchar_color(str[i],color);
     }
 }
-
-// void print(char *str)
-// {
-//     if(stopcon) return;
-//     print_color(str,0xAAAAAA);
-// }
 
 void print_hex(u32 num,u32 color)
 {

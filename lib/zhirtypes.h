@@ -26,6 +26,7 @@ typedef unsigned int i_ptr;
 #define true 1
 
 #define INLINE static inline __attribute__((always_inline, optimize("O3")))
+#define O0 __attribute__((optimize("O0")))
 #define PAK __attribute__((packed))
 #define API
 #define INIT __attribute__((section(".text.init")))

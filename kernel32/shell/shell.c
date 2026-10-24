@@ -43,6 +43,68 @@ struct object * printlinkerlist(struct objectArray* args)
 
 void (*custom_gets)(char * buf, u32 maxlen) = 0;
 
+void exec_line(char * buffer)
+{
+    i_ptr args[MAX_ARGS];
+    u32 current_arg = 0;
+
+    char d[] = ";";
+    char * token = strtok(buffer,d);
+
+    if(token[0] == '*')
+    {
+        i_ptr (*_function)(...) = (void*)strtol(token+1,0,0);
+        token = strtok(0,d);
+
+        while(token&&current_arg<4)
+        {
+            if(token[0] == 'i'&&token[1] == ':') args[current_arg] = strtol(token+2,0,0);
+            else if(token[0] == 'c'&&token[1] == ':') args[current_arg] = token[2];
+            else args[current_arg] = (i_ptr)token;
+
+            token = strtok(0,d);
+            current_arg++;
+        }
+
+        i_ptr ret = _function(args[0],args[1],args[2],args[3]);
+        printf("\nreturn %x\n",ret);
+    }
+    else if (token[0] == '_'){ // fastcall
+        i_ptr (*_function)(...) = resolve_function(token);
+
+        if(!_function) {
+            LOGE("function %s not found!",token);
+            return;
+        }
+
+        token = strtok(0,d);
+
+        while(token&&current_arg<4)
+        {
+            if(token[0] == 'i'&&token[1] == ':') args[current_arg] = strtol(token+2,0,0);
+            else if(token[0] == 'c'&&token[1] == ':') args[current_arg] = token[2];
+            else args[current_arg] = (i_ptr)token;
+
+            token = strtok(0,d);
+            current_arg++;
+        }
+
+        i_ptr ret = _function(args[0],args[1],args[2],args[3]);
+        printf("\nreturn %x\n",ret);
+    }
+    else { // zhirfunction
+        i_ptr (*_function)(...) = resolve_function(token);
+
+        if(!_function) {
+            LOGE("function %s not found!",token);
+            return;
+        }
+        //TODO: дописать обработку аргументов zhirfunction
+
+        _function();
+    }
+}
+
 void start_shell()
 {
     register_function("help",printlinkerlist,"print all functions in linker list");
@@ -52,8 +114,7 @@ void start_shell()
     {
         if(!custom_gets) custom_gets = resolve_function("_custom_gets");
 
-        i_ptr args[MAX_ARGS];
-        u32 current_arg = 0;
+
 
         char buffer[256];
         print_color("\x1A",0xFF0000);
@@ -64,60 +125,7 @@ void start_shell()
             continue;
         }
 
-        char d[] = ";";
-        char * token = strtok(buffer,d);
+        exec_line(buffer);
 
-        if(token[0] == '*')
-        {
-            i_ptr (*_function)(...) = (void*)strtol(token+1,0,0);
-            token = strtok(0,d);
-
-            while(token&&current_arg<4)
-            {
-                if(token[0] == 'i'&&token[1] == ':') args[current_arg] = strtol(token+2,0,0);
-                else if(token[0] == 'c'&&token[1] == ':') args[current_arg] = token[2];
-                else args[current_arg] = (i_ptr)token;
-
-                token = strtok(0,d);
-                current_arg++;
-            }
-
-            i_ptr ret = _function(args[0],args[1],args[2],args[3]);
-            printf("\nreturn %x\n",ret);
-        }
-        else if (token[0] == '_'){ // fastcall
-            i_ptr (*_function)(...) = resolve_function(token);
-
-            if(!_function) {
-                LOGE("function %s not found!",token);
-                continue;
-            }
-
-            token = strtok(0,d);
-
-            while(token&&current_arg<4)
-            {
-                if(token[0] == 'i'&&token[1] == ':') args[current_arg] = strtol(token+2,0,0);
-                else if(token[0] == 'c'&&token[1] == ':') args[current_arg] = token[2];
-                else args[current_arg] = (i_ptr)token;
-
-                token = strtok(0,d);
-                current_arg++;
-            }
-
-            i_ptr ret = _function(args[0],args[1],args[2],args[3]);
-            printf("\nreturn %x\n",ret);
-        }
-        else { // zhirfunction
-            i_ptr (*_function)(...) = resolve_function(token);
-
-            if(!_function) {
-                LOGE("function %s not found!",token);
-                continue;
-            }
-            //TODO: дописать обработку аргументов zhirfunction
-
-            _function();
-        }
     }
 }
