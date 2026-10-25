@@ -313,13 +313,13 @@ static void printramdisk()
     u32 idx = 0;
 
     while (1) {
-        if((idx++ % 3) == 0 && idx>1) printf("\n");
-
         rd->lba_read(rd, lba, (char*)&hdr, 1);
 
         if (hdr.name[0] == '\0') {
             break;
         }
+
+        if((idx++ % 3) == 0 && idx>1) printf("\n");
 
         u32 size = parse_octal(hdr.size, 11);
 
@@ -336,7 +336,7 @@ static void printramdisk()
 
         lba += 1 + sectors;
     }
-    //printf("\n");
+    printf("\n");
 }
 
 static void py(char diskletter, char* name)
