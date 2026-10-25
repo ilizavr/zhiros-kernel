@@ -7,9 +7,9 @@
 #include "../lib/string.h"
 #include "../lib/zhirapi.h"
 #include "../lib/ports.h"
+#include "../lib/hexdump.h"
 #include "elfloader.h"
 #include "time.h"
-#include "../lib/hexdump.h"
 
 struct fb_info*fb;
 
@@ -65,6 +65,7 @@ static struct object * fetch(struct objectArray* args)
     get_cpu_model(buffer);
 
     struct file *logo = open('A',"./logo.zi");
+    if(!logo) return 0;
     int size = logo->getsize(logo);
     struct image *logo_img = alloc(size);
     logo->read(logo, logo_img, size, 0);
@@ -73,17 +74,17 @@ static struct object * fetch(struct objectArray* args)
 
     u32 ticks = getticks()/1000;
 
-    print_color("\n                 OS: ",0xAAAAFF);
+    print_color("\n                 OS: ",0xFFA500);
     printf("ZHIROS");
-    print_color("\n                 CPU: ",0xAAAAFF);
+    print_color("\n                 CPU: ",0xFFA500);
     printf("%s",buffer);
-    print_color("\n                 Display: ",0xAAAAFF);
+    print_color("\n                 Display: ",0xFFA500);
     printf("%ux%u",fb->screen_width,fb->screen_height);
-    print_color("\n                 Uptime: ",0xAAAAFF);
+    print_color("\n                 Uptime: ",0xFFA500);
     if(ticks>3600) printf("%uh ", ticks/3600);
     if(ticks>60) printf("%um ", (ticks%3600)/60);
     printf("%us", ticks%60);
-    print_color("\n                 Memory allocated: ",0xAAAAFF);
+    print_color("\n                 Memory allocated: ",0xFFA500);
     printf("%Z/%Z",getused()>>10,(getused()+getfree())>>10);
 
     free(fb);
@@ -103,6 +104,7 @@ static struct object * fetch(struct objectArray* args)
 static void img(char disk, char* name)
 {
     struct file *logo = open(disk,name);
+    if(!logo) return;
     int size = logo->getsize(logo);
     struct image *logo_img = alloc(size);
 
@@ -188,7 +190,7 @@ static struct object * lsmod(struct objectArray* args)
 {
     struct module_info * mdls = get_module_array();
     printf("ID   LOCATION        NAME\n");
-    for(int i = 0; i< 256;i++) if(mdls[i].start) printf("%u    %x-%x   %s\n",i, mdls[i].start,mdls[i].start+mdls[i].size,mdls[i].path);
+    for(int i = 0; i< 256;i++) if(mdls[i].start) printf("%u    %x-%x   %C%s%C\n",i, mdls[i].start,mdls[i].start+mdls[i].size,0xFFA500,mdls[i].path,0xAAAAAA);
 
     return 0;
 }
@@ -262,183 +264,6 @@ static struct object* lsblk(struct objectArray* args)
     return 0;
 }
 
-#define MAX_HISTORY 10
-
-static char command_history[MAX_HISTORY][256];
-static int history_count = 0;
-
-#define KEY_UP    0x18
-#define KEY_DOWN  0x19
-#define KEY_LEFT  0x1B
-#define KEY_RIGHT 0x1A
-
-static u32 custom_gets(char *str, u32 maxlen)
-{
-    u32 len = 0;     // Реальная длина строки
-    u32 cursor = 0;  // Текущая позиция курсора в строке
-    int current_hist = history_count;
-
-    str[0] = '\0';
-
-    while (len < (maxlen - 1))
-    {
-        char chr = getchar();
-
-        // 1. Enter
-        if (chr == '\n' || chr == '\r') {
-            printf("\n");
-            break;
-        }
-
-        // 2. Backspace
-        if (chr == '\b' || chr == 127)
-        {
-            if (cursor > 0) {
-                if (cursor == len) {
-                    // Удаление в самом конце строки (как было)
-                    printf("\b  \b\b");
-                    len--;
-                    cursor--;
-                    str[len] = '\0';
-                } else {
-                    // Удаление в середине строки
-                    // Сдвигаем символы влево
-                    for (u32 j = cursor - 1; j < len - 1; j++) {
-                        str[j] = str[j + 1];
-                    }
-                    len--;
-                    cursor--;
-                    str[len] = '\0';
-
-                    // Перерисовываем хвост строки на экране
-                    printf("\b");
-                    for (u32 j = cursor; j < len; j++) {
-                        printf("%c", str[j]);
-                    }
-                    printf(" "); // Стираем остаток старого символа
-                    // Возвращаем терминальный курсор на позицию курсора
-                    for (u32 j = cursor; j <= len; j++) {
-                        printf("\b");
-                    }
-                }
-            }
-            continue;
-        }
-
-        // 3. Стрелка ВВЕРХ (История назад)
-        if (chr == KEY_UP) {
-            if (history_count > 0 && current_hist > 0) {
-                current_hist--;
-
-                // Возвращаем терминальный курсор в начало строки ввода
-                while (cursor > 0) {
-                    printf("\b");
-                    cursor--;
-                }
-                // Стираем старый текст пробелами
-                for (u32 j = 0; j < (len+1); j++) printf(" ");
-                for (u32 j = 0; j < (len+1); j++) printf("\b");
-
-                // Загружаем историю
-                strcpy(str, command_history[current_hist]);
-                len = strlen(str);
-                cursor = len;
-                printf("%s", str);
-            }
-            continue;
-        }
-        // 4. Стрелка ВНИЗ (История вперед)
-        else if (chr == KEY_DOWN) {
-            if (history_count > 0) {
-                current_hist++;
-
-                while (cursor > 0) {
-                    printf("\b");
-                    cursor--;
-                }
-                for (u32 j = 0; j < (len+1); j++) printf(" ");
-                for (u32 j = 0; j < (len+1); j++) printf("\b");
-
-
-                if (current_hist >= history_count) {
-                    current_hist = history_count;
-                    str[0] = '\0';
-                    len = 0;
-                    cursor = 0;
-                } else {
-                    strcpy(str, command_history[current_hist]);
-                    len = strlen(str);
-                    cursor = len;
-                    printf("%s", str);
-                }
-            }
-            continue;
-        }
-        // 5. Стрелка ВЛЕВО
-        else if (chr == KEY_LEFT) {
-            if (cursor > 0) {
-                printf("%c\b\b",str[cursor]);//фикс курсора
-                cursor--;
-            }
-            continue;
-        }
-        // 6. Стрелка ВПРАВО
-        else if (chr == KEY_RIGHT) {
-            if (cursor < len) {
-                printf("%c", str[cursor]); // Печатаем символ справа, продвигая визуальный курсор
-                cursor++;
-            }
-            continue;
-        }
-        // 7. Обычные печатные символы
-        if (chr >= 32 && chr < 127) {
-            if (cursor == len) {
-                // Ввод в конце строки
-                printf("%c", chr);
-                str[cursor++] = chr;
-                len++;
-                str[len] = '\0';
-            } else {
-                // Ввод в середине строки (вставка)
-                for (int j = len; j > (int)cursor; j--) {
-                    str[j] = str[j - 1];
-                }
-                str[cursor] = chr;
-                len++;
-                str[len] = '\0';
-
-                // Перерисовываем оставшуюся часть строки
-                for (u32 j = cursor; j < len; j++) {
-                    printf("%c", str[j]);
-                }
-                // Возвращаем курсор на правильную позицию (сразу после вставленного символа)
-                for (u32 j = cursor + 1; j < len; j++) {
-                    printf("\b");
-                }
-                cursor++;
-            }
-        }
-    }
-
-    str[len] = '\0';
-
-    if (!strlen(str)) {
-        return len;
-    }
-
-    // Сохранение в историю
-    if (history_count < MAX_HISTORY) {
-        strcpy(command_history[history_count], str);
-        history_count++;
-    } else {
-        for (int h = 0; h < MAX_HISTORY - 1; h++) {
-            strcpy(command_history[h], command_history[h + 1]);
-        }
-        strcpy(command_history[MAX_HISTORY - 1], str);
-    }
-
-    return len;
-}
 
 #include <stddef.h>
 #include <stdint.h>
@@ -485,8 +310,11 @@ static void printramdisk()
 
     struct ustar_header hdr;
     u32 lba = 0;
+    u32 idx = 0;
 
     while (1) {
+        if((idx++ % 3) == 0 && idx>1) printf("\n");
+
         rd->lba_read(rd, lba, (char*)&hdr, 1);
 
         if (hdr.name[0] == '\0') {
@@ -498,13 +326,22 @@ static void printramdisk()
         if(hdr.typeflag == '5') printf("%C", 0x0088FF);
 
         char *ext = hdr.name+strlen(hdr.name)-4;
-        if(!strcmp(ext,".mod")||!strcmp(ext,".elf")) printf("%C", 0x00FF88);
-        printf("%s%C\n", hdr.name,0xAAAAAA);
+        if(!strcmp(ext,".mod")) printf("%C", 0xFFA500);
+        if(!strcmp(ext,".elf")) printf("%C", 0x55FF55);
+        printf("%s%C", hdr.name,0xAAAAAA);
+        for(int i = strlen(hdr.name);(i%20)>0;i++)printf(" ");
+        idx += strlen(hdr.name)/20;
 
         u32 sectors = (size + 511) / 512;
 
         lba += 1 + sectors;
     }
+    //printf("\n");
+}
+
+static void py(char diskletter, char* name)
+{
+    elf_load('A',"./py.elf",(i_ptr)diskletter,(i_ptr)name);
 }
 
 INIT void init(void* (*_resolve_function)(char* name))
@@ -525,8 +362,12 @@ INIT void init(void* (*_resolve_function)(char* name))
     register_function("_dmpdsk",dumpdisk,"hexdump disk. _dmpdsk;i:diskidx;i:lba;i:blocks");
     register_function("_elfload",elf_load,"_elfload(char diskletter,char* name) -> bool success");
     register_function("_img",img,"_img;c:diskletter;name. print image in fbcon");
-    register_function("_custom_gets",custom_gets,"_custom_gets(char* buffer, u32 maxlen)");
 
+    struct file* pyelf = open('A',"./py.elf");
+    if(pyelf) {
+        register_function("_py",py,"_py;c:diskletter;name");
+        pyelf->close(pyelf);
+    }
 
     create_task("clitools thread",clitools);
 }

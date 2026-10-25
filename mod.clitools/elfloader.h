@@ -35,7 +35,7 @@ struct elf32_phdr {
     u32 p_align;
 } __attribute__((packed));
 
-static bool elf_load(char diskletter, char *name)
+static bool elf_load(char diskletter, char *name, i_ptr arg1, i_ptr arg2)
 {
     struct file *f = open(diskletter, name);
     if (!f) {
@@ -83,6 +83,6 @@ static bool elf_load(char diskletter, char *name)
         }
     }
 
-    CALL(header->e_entry,resolve_function);
+    CALL(header->e_entry,resolve_function,arg1,arg2);
     return true;
 }
