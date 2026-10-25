@@ -30,8 +30,6 @@ void set_font_scale(u32 scale) {
 
 
 INLINE void put_pixel(u32 x, u32 y, u32 color) {
-    if(stopcon) return;
-
     u32 *pixel = (u32*)(fb_addr + y * screen_pitch + x * bpp);
     *pixel = color|0xFF000000;
 
@@ -42,7 +40,6 @@ INLINE void put_pixel(u32 x, u32 y, u32 color) {
 
 INLINE void put_sym(u8 sym, u32 startx, u32 starty,u32 color,u32 bgcolor)
 {
-    if(stopcon) return;
     for(int y = 0;y<8;y++)
     {
         u8 font_row = font6x8[sym*8+y];
@@ -64,7 +61,6 @@ INLINE void put_sym(u8 sym, u32 startx, u32 starty,u32 color,u32 bgcolor)
 }
 INLINE void put_sym_nobg(u8 sym, u32 startx, u32 starty, u32 color)
 {
-    if (stopcon) return;
     put_sym(sym,startx, starty,color,0);
 }
 
@@ -98,7 +94,6 @@ void clearframe() {
 
 void roll_screen()
 {
-    if(stopcon) return;
     memcpy_wc((char*)fb_addr,(char*)fb_secondline_addr,fb_size_withoutlastline);
     memset((char*)fb_lastline_addr,0,fb_onelinesize);
 
@@ -107,10 +102,10 @@ void roll_screen()
 
 void putchar_color(char chr, u32 color)
 {
+    if(stopcon) return;
     u32 char_w = 7 * fb_scale /2;
     u32 char_h = 9 * fb_scale /2;
 
-    if(stopcon) return;
     if((curx+char_w-1)>screen_width)
     {
         cury+=char_h;
@@ -152,7 +147,6 @@ void putchar_color(char chr, u32 color)
 
 O0 void print_color(char *str, u32 color)
 {
-    if(stopcon) return;
     int len = strlen(str);
     for(int i = 0;i<len;i++)
     {
@@ -162,7 +156,6 @@ O0 void print_color(char *str, u32 color)
 
 void print_hex(u32 num,u32 color)
 {
-    if(stopcon) return;
     char buffer[12]; buffer[11] = '\0';buffer[10] = '0';
     int i = 10;
     if(num==0)i--;
@@ -178,7 +171,6 @@ void print_hex(u32 num,u32 color)
 
 void print_int(u32 num,u32 color)
 {
-    if(stopcon) return;
     char buffer[12]; buffer[11] = '\0';buffer[10] = '0';
     int i = 10;
     if(num==0)i--;
