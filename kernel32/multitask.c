@@ -1,3 +1,9 @@
+/*
+ * Copyright (c) 2026 ilizavr
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
+
 #include "../lib/zhirtypes.h"
 #include "../lib/string.h"
 #include "interrupt.h"
@@ -84,16 +90,6 @@ void yield()
     switch_context(tasks[current_task_idx].esp, &tasks[prev_idx].esp);
 }
 
-// void yield2()
-// {
-//     if(preemptive_mode)yield();
-// }
-
-// void set_preemptive_mode(bool e)
-// {
-//     preemptive_mode = e;
-// }
-
 
 struct task* get_tasks()
 {
@@ -107,6 +103,4 @@ void init_multitask()
     tasks[0].stack_base = 0;
     tasks[0].esp = 0;
     current_task_idx = 0;
-
-    //hook_interrupt(0x20,yield2);
 }

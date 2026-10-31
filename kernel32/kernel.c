@@ -143,7 +143,8 @@ void main(i_ptr addr, u32 magic)
     register_function("_set_font_scale",set_font_scale,"_set_font_scale(u32 size) -> None");
     register_function("_mount",mount,"_mount(struct disk* dsk, void * open_fnc, void* mkdir_fnc) -> char diskletter");
     register_function("_open",open,"_open(char diskletter, char* path) -> struct file*");
-    register_function("_mkdir",open,"_mkdir(char diskletter, char* path) -> struct file*");
+    register_function("_mkdir",mkdir,"_mkdir(char diskletter, char* path) -> struct file*");
+    register_function("_create_file", create_file, "_create_file(char disk_letter,char *path)");
     register_function("_load_mod",load_mod,"_load_mod(char diskletter, char* path) -> bool success");
     register_function("_unload_mod",unload_mod,"_unload_mod(u32 idx) -> bool success");
     register_function("_get_linker_head",get_linker_head,"_get_linker_head() -> struct function_info*");
@@ -159,7 +160,7 @@ void main(i_ptr addr, u32 magic)
 
     LOGI("kernel api registred");
 
-    ramdisk_letter = mount(ramdisk,open_unstar,0);
+    ramdisk_letter = mount(ramdisk,open_unstar,0,0);
     LOGI("ramdisk letter: %c",ramdisk_letter);
 
 

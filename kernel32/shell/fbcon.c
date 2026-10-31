@@ -198,7 +198,7 @@ struct fb_info* getfb()
     ret->bpp = bpp;
     ret->curx = curx;
     ret->cury = cury;
-    ret->font_scale = fb_scale;
+    ret->font_height = 9*fb_scale/2;
     return ret;
 }
 struct fb_info* fbcon_stop()

@@ -75,23 +75,6 @@ bool free(void *addr)//FIXME: anti fragmentation
     }
     block->allocated = 0;
 
-    // if((i_ptr)block->next == ((i_ptr)block+block->size+sizeof(struct memoryblock)) && block->next->allocated == 0)
-    // {
-    //     block->size+=block->next->size+sizeof(struct memoryblock);
-    //     if(block->next->next)block->next->next->prev = block;
-    //     block->next=block->next->next;
-    // }
-    // if(block->prev&&block->prev->allocated == 0)
-    // {
-    //     block=block->prev;
-    //
-    //     if((i_ptr)block->next != ((i_ptr)block+block->size+sizeof(struct memoryblock))) goto END;
-    //
-    //     block->size+=block->next->size+sizeof(struct memoryblock);
-    //     if(block->next->next)block->next->next->prev = block;
-    //     block->next=block->next->next;
-    // }
-END:
     restore_irq(eflags);
     return true;
 }

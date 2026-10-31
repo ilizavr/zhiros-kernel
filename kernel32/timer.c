@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2026 ilizavr
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
 #include "../lib/zhirtypes.h"
 #include "../lib/ports.h"
 #include "interrupt.h"

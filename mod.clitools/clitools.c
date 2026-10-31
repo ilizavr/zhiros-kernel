@@ -28,13 +28,13 @@ static void put_pixel(u32 x, u32 y, u32 color) {
     *pixel = *pixel2;
 }
 
-static void drawimage(struct image*img,int startx,int starty)
+static void drawimage(struct image*img,int startx,int starty, int font_scale)
 {
     for(int x = 0;x<img->width;x++)
         for(int y = 0;y<img->height;y++)
-            for(int dx = 0;dx<fb->font_scale;dx++)
-                for(int dy = 0;dy<fb->font_scale;dy++)
-                    put_pixel((x*fb->font_scale+dx)/2+startx,(y*fb->font_scale+dy)/2+starty,img->bytes[y*img->width+x]);
+            //for(int dx = 0;dx< font_scale;dx++)
+                //for(int dy = 0;dy< font_scale;dy++)
+                    put_pixel(x+startx,y+starty,img->bytes[y*img->width+x]);
 }
 
 static void cpuid(u32 code, u32*a, u32*b, u32*c, u32*d)
@@ -74,7 +74,7 @@ static struct object * fetch(struct objectArray* args)
 
     u32 ticks = getticks()/1000;
 
-    print_color("\n                 OS: ",0xFFA500);
+    print_color("                 OS: ",0xFFA500);
     printf("ZHIROS");
     print_color("\n                 CPU: ",0xFFA500);
     printf("%s",buffer);
@@ -85,14 +85,14 @@ static struct object * fetch(struct objectArray* args)
     if(ticks>60) printf("%um ", (ticks%3600)/60);
     printf("%us", ticks%60);
     print_color("\n                 Memory allocated: ",0xFFA500);
-    printf("%Z/%Z",getused()>>10,(getused()+getfree())>>10);
+    printf("%Z/%Z\n",getused()>>10,(getused()+getfree())>>10);
+
+    int i = 5;
+    for( ; i <= logo_img->height/fb->font_height ; i++) printf(" ");
 
     free(fb);
-
-    for(int i = logo_img->height/9-5;i>=0;i--)printf("\n");
-
     fb = getfb();
-    drawimage(logo_img, 0, fb->cury - logo_img->height*fb->font_scale/2);
+    drawimage(logo_img, 0, fb->cury - fb->font_height*i, (fb->font_height+4)/9);
 
     logo->close(logo);
     free(fb);
@@ -112,7 +112,7 @@ static void img(char disk, char* name)
     logo->close(logo);
 
     fb = getfb();
-    drawimage(logo_img, fb->screen_width-logo_img->width, 0);
+    drawimage(logo_img, fb->screen_width-logo_img->width, 0,1);
     free(logo_img);
     free(fb);
 }
@@ -209,7 +209,7 @@ static void printfile(char diskletter, char* name)
         LOGW("file is big. continue?");
         char chr = getchar();
         if(chr!='y'){
-            f->close(f);
+            if(f->close) f->close(f);
             return;
         }
     }
@@ -217,7 +217,7 @@ static void printfile(char diskletter, char* name)
     f->read(f,buffer,size,0);
     buffer[size] = 0;
     printf("%s",buffer);
-    f->close(f);
+    if(f->close)f->close(f);
     free(buffer);
 }
 
@@ -264,7 +264,57 @@ static struct object* lsblk(struct objectArray* args)
     return 0;
 }
 
+static void ls(char diskletter, char* name) {
+    struct file* f = open(diskletter,name);
+    struct file entrites[8];
+    if(!f)
+    {
+        LOGE("dir %s not found", name);
+        return;
+    }
 
+    u32 bytes = f->read(f, entrites, sizeof(entrites), 0);
+    u32 count = bytes / sizeof(entrites[0]);
+
+    u32 idx = 0;
+
+    for (u32 i = 0; i < count; i++){
+        if(entrites[i].is_dir) printf("%C", 0x0088FF);
+
+        char *ext = entrites[i].path+strlen(entrites[i].path)-4;
+        if(!strcmp(ext,".mod")) printf("%C", 0xFFA500);
+        if(!strcmp(ext,".elf")) printf("%C", 0x55FF55);
+        printf("%s%C", entrites[i].path,0xAAAAAA);
+        for(int i = strlen(entrites[i].path);(i%20)>0;i++)printf(" ");
+        idx += strlen(entrites[i].path)/20;
+    }
+}
+
+static void writefile(char diskletter, char* name) {
+    struct file * ff = open(diskletter,name);
+    if(!ff && create_file) ff = create_file(diskletter,name);
+    if(!ff || !create_file || !ff->write) LOGE("fs not support this");
+
+    printf("to stop writing enter Q\n");
+
+    char* buffer = alloc(8192);
+    char* curptr = buffer;
+    for(;;)
+    {
+        int recv = gets(curptr,256);
+        if(curptr[0] == 'Q' && curptr[1] == 0) {curptr[0] = 0; break;}
+
+        curptr+= recv;
+        curptr[0] = '\n';
+        curptr++;
+    }
+
+    //printf("\n\nu write:\n%s", buffer);
+    ff->write(ff, buffer, strlen(buffer),0);
+
+
+    if(ff->close) ff->close(ff);
+}
 #include <stddef.h>
 #include <stdint.h>
 
@@ -358,6 +408,8 @@ INIT void init(void* (*_resolve_function)(char* name))
     register_function("lsrd",printramdisk,"print ramdisk");
 
     register_function("_pf",printfile,"print file. use _pf;c:diskletter;name");
+    register_function("_wf",writefile,"write file. use _pf;c:diskletter;name");
+    register_function("_ls",ls,"print directory. use _ls;c:diskletter;name");
     register_function("_dmp",dumpmem,"hexdump ram. _dmp;i:0xaddr;i:size");
     register_function("_dmpdsk",dumpdisk,"hexdump disk. _dmpdsk;i:diskidx;i:lba;i:blocks");
     register_function("_elfload",elf_load,"_elfload(char diskletter,char* name) -> bool success");

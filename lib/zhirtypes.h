@@ -106,7 +106,7 @@ struct fb_info
     u32 cury;
 
     i_ptr shadow_fb_addr;
-    u32 font_scale;
+    u32 font_height;
 };
 
 struct disk

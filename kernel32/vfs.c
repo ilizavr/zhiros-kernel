@@ -13,12 +13,14 @@ char current_letter_disk = 'A';
 
 struct mount{
     struct disk* dsk;
-    struct file* (*open)(struct disk* disk,char *path);
-    struct file* (*mkdir)(struct disk* disk,char *path);
+    struct file* (*open)(struct disk* disk, char *path);
+    struct file* (*mkdir)(struct disk* disk, char *path);
+    struct file* (*create_file)(struct disk *disk, char *path);
 };
+
 struct mount mounts[26];
 
-char mount(struct disk* dsk, void * open_fnc, void * mkdir_fnc)
+char mount(struct disk* dsk, void * open_fnc, void * mkdir_fnc, void * create_file_fnc)
 {
     u32 eflags = save_irq();
     if(current_letter_disk>'Z') {
@@ -29,6 +31,7 @@ char mount(struct disk* dsk, void * open_fnc, void * mkdir_fnc)
     mounts[current_letter_disk-'A'].dsk = dsk;
     mounts[current_letter_disk-'A'].open = open_fnc;
     mounts[current_letter_disk-'A'].mkdir = mkdir_fnc;
+    mounts[current_letter_disk-'A'].create_file = create_file_fnc;
     current_letter_disk++;
 
     dsk->mountletter = current_letter_disk-1;
@@ -52,6 +55,15 @@ struct file* mkdir(char disk_letter,char *path)
     if(disk_letter<'A'||disk_letter>=current_letter_disk) return 0;
     if(!mounts[disk_letter-'A'].mkdir) return 0;
     return mounts[disk_letter-'A'].mkdir(mounts[disk_letter-'A'].dsk,path);
+}
+
+struct file* create_file(char disk_letter,char *path)
+{
+    if(disk_letter>='a'&&disk_letter<='z') disk_letter = disk_letter-'a'+'A';
+
+    if(disk_letter<'A'||disk_letter>=current_letter_disk) return 0;
+    if(!mounts[disk_letter-'A'].create_file) return 0;
+    return mounts[disk_letter-'A'].create_file(mounts[disk_letter-'A'].dsk,path);
 }
 /*
 u32 read_stub(struct file* file, void* buffer, u32 size, u32 offset)

@@ -35,13 +35,15 @@ static u32 (*getticks)();
 static bool (*diskadd)(struct disk* dsk);
 static struct disk* (*getdisk)(int idx);
 
-static bool (*mount)(struct disk* dsk, void * open_fnc, void* mkdir_function);
+static bool (*mount)(struct disk* dsk, void * open_fnc, void* mkdir_function, void* create_file_function);
 static struct file* (*open)(char diskletter, char* path);
+static struct file* (*create_file)(char diskletter, char* path);
 static struct file* (*mkdir)(char diskletter, char* path);
 
 static void (*yield)();
 static struct task* (*get_tasks)();
 static struct task* (*create_task)(char * name, void* function);
+static void (*kill)(u32 tid);
 
 static void (*exec_line)(char* cmd);
 
@@ -84,10 +86,12 @@ static inline void api_init(void* (*_resolve_function)(char* name)) {
     mount = _resolve_function("_mount");
     open = _resolve_function("_open");
     mkdir = _resolve_function("_mkdir");
+    create_file = _resolve_function("_create_file");
 
     yield = _resolve_function("_yield");
     get_tasks = _resolve_function("_get_tasks");
     create_task = _resolve_function("_create_task");
+    kill = _resolve_function("_kill");
 
     exec_line = _resolve_function("_exec_line");
 }

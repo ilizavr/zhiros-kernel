@@ -43,8 +43,13 @@ build_module mod.clitools/cli_NS.c ramdisk/cli_NS.mod # NEUROSLOP WARNING
 build_module mod.drivers/mouse.c ramdisk/mouse.mod # NEUROSLOP WARNING
 build_module mod.drivers/bios_disk_driver.c ramdisk/bios_disk_driver.mod
 build_module mod.drivers/mbr_scan.c ramdisk/mbr.mod
-build_module mod.games/pong.c ramdisk/pong.mod
+build_module mod.drivers/tmpfs.c ramdisk/tmpfs.mod
 build_module mod.examples/hello_mod.c ramdisk/hello.mod
+build_module mod.win/window_manager.c ramdisk/win.mod
+build_module mod.win/terminal.c ramdisk/term.mod
+build_module mod.win/pong_wm.c ramdisk/pong.mod
+build_module mod.win/img_view.c ramdisk/img_view.mod
+build_module mod.win/doomfixer.c ramdisk/doomfixer.mod
 gcc $ELF_MOD_FLAGS mod.examples/hello_elf.c -o ramdisk/hello.elf
 #bios disk driver 16bit blob
 nasm mod.drivers/bios.asm -o ramdisk/bios.bin
