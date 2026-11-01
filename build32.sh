@@ -40,7 +40,7 @@ ld -m elf_i386 -T kernel32/linker.ld -o iso/boot/kernel.bin build/kernel_asm.o b
 #compile modules
 build_module mod.clitools/clitools.c ramdisk/clitools.mod
 build_module mod.clitools/cli_NS.c ramdisk/cli_NS.mod # NEUROSLOP WARNING
-#build_module mod.drivers/mouse.c ramdisk/mouse.mod # NEUROSLOP WARNING
+build_module mod.drivers/mouse.c ramdisk/mouse.mod # NEUROSLOP WARNING
 build_module mod.drivers/bios_disk_driver.c ramdisk/bios_disk_driver.mod
 build_module mod.drivers/mbr_scan.c ramdisk/mbr.mod
 build_module mod.drivers/tmpfs.c ramdisk/tmpfs.mod
