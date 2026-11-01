@@ -937,10 +937,10 @@ static void window_destroy(Window *window) {
         }
     }
 
-    // if (window->task) {
-    //     kill(window->task->tid);
-    //     window->task = 0;
-    // }
+    if (window->task) {
+         kill(window->task->tid);
+         window->task = 0;
+    }
 
     free(window->buffer);
     window->buffer = 0;
