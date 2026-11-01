@@ -88,7 +88,7 @@ static struct object * fetch(struct objectArray* args)
     printf("%Z/%Z\n",getused()>>10,(getused()+getfree())>>10);
 
     int i = 5;
-    for( ; i <= logo_img->height/fb->font_height ; i++) printf(" ");
+    for( ; i <= logo_img->height/fb->font_height ; i++) printf("\n");
 
     free(fb);
     fb = getfb();
@@ -413,7 +413,7 @@ INIT void init(void* (*_resolve_function)(char* name))
     register_function("_dmp",dumpmem,"hexdump ram. _dmp;i:0xaddr;i:size");
     register_function("_dmpdsk",dumpdisk,"hexdump disk. _dmpdsk;i:diskidx;i:lba;i:blocks");
     register_function("_elfload",elf_load,"_elfload(char diskletter,char* name) -> bool success");
-    register_function("_img",img,"_img;c:diskletter;name. print image in fbcon");
+    if(!_resolve_function("_img")) register_function("_img",img,"_img;c:diskletter;name. view image");
 
     struct file* pyelf = open('A',"./py.elf");
     if(pyelf) {

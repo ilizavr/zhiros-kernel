@@ -145,6 +145,7 @@ struct task
     char *name;
     void *esp;
     void *stack_base;
+    int module_idx;
 };
 
 static const char keyboard_map[128] =

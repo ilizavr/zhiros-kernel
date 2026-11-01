@@ -1,21 +1,19 @@
 /*
- * Copyright (c) 2026 ilizavr & yellowhat
+ * Copyright (c) 2026 ilizavr & TINERKOTL & yellowhat
  * SPDX-License-Identifier: MIT
  */
 
-// by TINERKOTL
-
 /*
-Это основной модуль Windows Manager.
+ Э то основн*ой модуль Windows Manager.
 
-Если у вас есть замечания, идеи как можно оптимизировать или какие-нибудь новые функции.
-Пишите мне в ТГ (ссылка в описании на github) или в самом github в кладке "issues".
+ Если у вас есть замечания, идеи как можно оптимизировать или какие-нибудь новые функции.
+ Пишите мне в ТГ (ссылка в описании на github) или в самом github в кладке "issues".
 
-Если вы пишите приложение, добавляйте их в свой репозиторий и пишите мне, чтобы я добавил вас, как создателя того или иного приложения.
-В будущем будет создан сайт, где будут добавлены все приложения и их создатели.
+ Если вы пишите приложение, добавляйте их в свой репозиторий и пишите мне, чтобы я добавил вас, как создателя того или иного приложения.
+ В будущем будет создан сайт, где будут добавлены все приложения и их создатели.
 
-Удачи в написании приложений, жду ваши работы.
-*/
+ Удачи в написании приложений, жду ваши работы.
+ */
 
 
 #include "WM_types.h"
@@ -36,6 +34,7 @@ void (*sleep)(u32 ms);
 u32 (*getticks)();
 void (*yield)();
 bool (*kill)(u32 tid);
+static bool (*unload_mod)(u32 idx);
 
 struct task* (*create_task)(char *name, void* function);
 
@@ -53,19 +52,14 @@ static DirtyRect dirty = {0,0,0,0, false};
 #define MAX_DESKTOP_ICONS 16
 
 bool changed = false;
-bool mouse_changed = false;
 
 u8 *second_buffer = 0;
 u32 second_buffer_size = 0;
 u32 mouse_x = 0, mouse_y = 0;
 s32 prev_mouse_x = -1, prev_mouse_y = -1;
-s32 prev_window_x = -1, prev_window_y = -1;
-struct image *ptica_img;
 
 Window windows[MAX_WINDOWS];
 Window *z_order[MAX_WINDOWS];
-u32 mouse_backup[11][6];
-bool mouse_backup_valid = false;
 u32 window_count = 0;
 u32 active_index = 0;
 u32 fps_frames = 0;
@@ -73,7 +67,7 @@ u32 fps_last_tick = 0;
 u32 fps_value = 0;
 Window *active_window = 0;
 s32 first_icon_x = 24, first_icon_y = 24, icon_size = 40;
-//DesktopIcon desktop_icons[MAX_DESKTOP_ICONS];
+DesktopIcon desktop_icons[MAX_DESKTOP_ICONS];
 u32 desktop_icon_count = 0;
 
 // static bool desktop_register_icon(u32 x, u32 y, u32 size, DesktopIconDraw draw) {
@@ -320,7 +314,7 @@ static void restore_rect_from_background(s32 x, s32 y, s32 w, s32 h) {
     for (s32 row = 0; row < h; row++) {
         u8 *dst = second_buffer + (y + row) * fb->screen_pitch + x * fb->bpp;
         u8 *src = (u8 *)desktop_background_buffer +
-                  ((y + row) * (fb->screen_pitch / 4) + x) * sizeof(u32);
+        ((y + row) * (fb->screen_pitch / 4) + x) * sizeof(u32);
 
         memcpy(dst, src, (u32)w * sizeof(u32));
     }
@@ -405,9 +399,7 @@ static void put_pixel(u32 x, u32 y, u32 color) {
     if (x >= fb->screen_width || y >= fb->screen_height) return;
 
     u32 *pixel = (u32*)(second_buffer + y * fb->screen_pitch + x * fb->bpp);
-    *pixel &= 0xFF000000;
-    if(fb->bpp == 4) *pixel |= 0xFF000000;
-    *pixel |= color;
+    *pixel = color | 0xFF000000;
 }
 
 static void draw_char(Window *window, u8 code, u32 x, u32 y, u32 color)
@@ -455,14 +447,35 @@ static void draw_border_window(Window *window, u32 color) {
 
 static void window_fill_rect(Window *window, u32 x, u32 y, u32 width, u32 height, u32 color)
 {
-    u32 *first_row = &window->buffer[y * window->width + x];
+    if (!window || !window->buffer || window->width <= 0)
+        return;
 
-    for (u32 i = 0; i < width; i++) 
+    s32 rows = (s32)(window->buffer_size / (u32)window->width);
+    if (rows > window->height)
+        rows = window->height;
+    if (rows <= 0)
+        return;
+
+    s32 sx = (s32)x, sy = (s32)y;
+    s32 sw = (s32)width, sh = (s32)height;
+
+    if (sx < 0) { sw += sx; sx = 0; }
+    if (sy < 0) { sh += sy; sy = 0; }
+    if (sx + sw > window->width) sw = window->width - sx;
+    if (sy + sh > rows)          sh = rows - sy;
+
+    if (sw <= 0 || sh <= 0)
+        return;
+
+    u32 w32 = (u32)window->width;
+    u32 *first_row = &window->buffer[(u32)sy * w32 + (u32)sx];
+
+    for (s32 i = 0; i < sw; i++)
         first_row[i] = color;
 
-
-    for (u32 row = 1; row < height; row++) {
-        memcpy(&window->buffer[(y + row) * window->width + x], first_row, width * sizeof(u32));
+    for (s32 row = 1; row < sh; row++) {
+        memcpy(&window->buffer[(u32)(sy + row) * w32 + (u32)sx],
+               first_row, (u32)sw * sizeof(u32));
     }
 }
 
@@ -541,65 +554,25 @@ static void clear_mouse_old_area(s32 x, s32 y) {
 }
 
 static void draw_mouse() {
-    if (prev_mouse_x >= 0 && prev_mouse_y >= 0 &&
-        (prev_mouse_x != mouse_x || prev_mouse_y != mouse_y)) {
-
-        for (u32 dy = 0; dy < 11; dy++) {
-            for (u32 dx = 0; dx < 6; dx++) {
-                s32 px = prev_mouse_x + (s32)dx;
-                s32 py = prev_mouse_y + (s32)dy;
-
-                if (px < 0 || py < 0 ||
-                    px >= (s32)fb->screen_width ||
-                    py >= (s32)fb->screen_height)
-                    continue;
-
-                u32 *p = (u32 *)(second_buffer + py * fb->screen_pitch + px * fb->bpp);
-                mouse_backup[dy][dx] = *p;
-            }
-        }
-
-        mouse_backup_valid = true;
-
-        for (u32 dy = 0; dy < 11; dy++) {
-            for (u32 dx = 0; dx < 6; dx++) {
-                s32 px = prev_mouse_x + (s32)dx;
-                s32 py = prev_mouse_y + (s32)dy;
-
-                if (px < 0 || py < 0 ||
-                    px >= (s32)fb->screen_width ||
-                    py >= (s32)fb->screen_height)
-                    continue;
-
-                u32 *p = (u32 *)(second_buffer + py * fb->screen_pitch + px * fb->bpp);
-                *p = mouse_backup[dy][dx];
-            }
-        }
-
+    if (prev_mouse_x >= 0 && prev_mouse_y >= 0)
         dirty_rect_union(prev_mouse_x, prev_mouse_y, 6, 11);
-    }
 
     for (u32 dy = 0; dy < 11; dy++) {
         for (u32 dx = 0; dx < 6; dx++) {
             if (!mouse_now[dy][dx])
                 continue;
-
             s32 px = (s32)mouse_x + (s32)dx;
             s32 py = (s32)mouse_y + (s32)dy;
-
             if (px < 0 || py < 0 ||
-                px >= (s32)fb->screen_width ||
-                py >= (s32)fb->screen_height)
+                px >= (s32)fb->screen_width || py >= (s32)fb->screen_height)
                 continue;
-
             put_pixel((u32)px, (u32)py, 0x00FF0000);
         }
     }
 
-    dirty_rect_union(mouse_x, mouse_y, 6, 11);
-
-    prev_mouse_x = mouse_x;
-    prev_mouse_y = mouse_y;
+    dirty_rect_union((s32)mouse_x, (s32)mouse_y, 6, 11);
+    prev_mouse_x = (s32)mouse_x;
+    prev_mouse_y = (s32)mouse_y;
 }
 
 static void draw_icons_window(Window *window) {
@@ -636,7 +609,7 @@ static void draw_icons_window(Window *window) {
 
             u32 px = icon_pos + 20 + dx;
             u32 py = 5 + dy;
-                
+
             put_pixel_window(window, px, py, 0x00000000);
         }
     }
@@ -649,57 +622,55 @@ static void draw_window_content(Window *window) {
 }
 
 /*
-void desktop_fill_rect(s32 x, s32 y, s32 width, s32 height, u32 color) {
-    for (u32 row = 0; row < height; row++) {
-        for (u32 col = 0; col < width; col++) {
-            u32 px = x + col;
-            u32 py = y + row;
+ v oid deskt*op_fill_rect(s32 x, s32 y, s32 width, s32 height, u32 color) {
+ for (u32 row = 0; row < height; row++) {
+     for (u32 col = 0; col < width; col++) {
+         u32 px = x + col;
+         u32 py = y + row;
 
-            if (px >= 0 && py >= 0)
-                put_pixel(px, py, color);
-        }
-    }
-}
+         if (px >= 0 && py >= 0)
+             put_pixel(px, py, color);
+         }
+         }
+         }
 
-void desktop_draw_string(const char *text, u32 x, u32 y, u32 color) {
-    while (*text) {
-        u8 code = (u8)*text++;
+         void desktop_draw_string(const char *text, u32 x, u32 y, u32 color) {
+         while (*text) {
+             u8 code = (u8)*text++;
 
-        for (u32 row = 0; row < 16; row++) {
-            u8 bits = font8x16[16 * code + row];
+             for (u32 row = 0; row < 16; row++) {
+                 u8 bits = font8x16[16 * code + row];
 
-            for (u32 col = 0; col < 8; col++) {
-                if (bits & (0x80 >> col))
-                    put_pixel(x + col, y + row, color);
-            }
-        }
+                 for (u32 col = 0; col < 8; col++) {
+                     if (bits & (0x80 >> col))
+                         put_pixel(x + col, y + row, color);
+                     }
+                     }
 
-        x += 8;
-    }
-}
+                     x += 8;
+                     }
+                     }
 
-static void draw_desktop() {
-    // for (u32 i = 0; i < desktop_icon_count; i++){
-    //     DesktopIcon *icon = &desktop_icons[i];
-    //     printf("before icon draw\n");
-    //     icon->draw(icon->x, icon->y, icon->size);
-    //     printf("after icon draw\n");
-    // }
-}
-*/
+                     static void draw_desktop() {
+                     // for (u32 i = 0; i < desktop_icon_count; i++){
+                     //     DesktopIcon *icon = &desktop_icons[i];
+                     //     printf("before icon draw\n");
+                     //     icon->draw(icon->x, icon->y, icon->size);
+                     //     printf("after icon draw\n");
+                     // }
+                     }
+                     */
 
-static void compositor_present() {
-    if (!active_window || !active_window->full_screen)
+static void wm_render(void) {
+    if (!active_window || !active_window->full_screen){
         clearframe();
-
-    // draw_desktop();
+        dirty_rect_union(0, 0, fb->screen_width, fb->screen_height);
+    }
 
     for (u32 i = 0; i < window_count; i++){
         Window *window = z_order[i];
-
         if (!window || window->invisible)
             continue;
-
         draw_window_content(window);
         present_window(window);
         draw_border_window(window, 0x00FFFFFF);
@@ -709,20 +680,9 @@ static void compositor_present() {
     present_framebuffer();
 }
 
-/*static void filled_circle(Window *window, int cx, int cy, int radius, int color) {
-    int radius_squared = radius * radius;
-
-    for (int x = -radius; x <= radius; x++) {
-        for (int y = -radius; y <= radius; y++) {
-            if (x * x + y * y <= radius_squared) {
-                int px = cx + x;
-                int py = cy + y;
-
-                put_pixel_window(window, px, py, color);
-            }
-        }
-    }
-}*/
+static void compositor_present() {
+    changed = true;
+}
 
 static void window_raise(Window *window) {
     if(window == 0)
@@ -859,14 +819,14 @@ static void drawimage(Window *window, struct image*img,int startx,int starty)
 
 static void window_render(Window *window) {
     clearframe_win(window, 0xFFAAAAAA);
-    
+
     window_fill_rect(window, 0, 0, window->width, 20, 0xFFFFFFFF);
 
     draw_string(window, window->name, 5, 2, 0x000000);
 
     draw_icons_window(window);
 
-    draw_border_window(window, 0xFFFFFFFF);
+    changed = true;
 }
 
 static u32 clamp(s32 value, s32 min, s32 max)
@@ -912,12 +872,12 @@ static void window_destroy(Window *window) {
         return;
 
     window_restore_old_area(window);
-    
+
     u32 index = 0;
 
     while (index < window_count && z_order[index] != window)
         index++;
-    
+
     if (index >= window_count)
         return;
 
@@ -938,13 +898,15 @@ static void window_destroy(Window *window) {
     }
 
     if (window->task) {
-         kill(window->task->tid);
-         window->task = 0;
-    }
+        int module_idx = window->task->module_idx;
+        kill(window->task->tid);
+        window->task = 0;
+        free(window->buffer);
+        window->buffer = 0;
+        window->buffer_size = 0;
 
-    free(window->buffer);
-    window->buffer = 0;
-    window->buffer_size = 0;
+        unload_mod((u32)module_idx);
+    }
 
     changed = true;
 }
@@ -954,6 +916,7 @@ static bool window_is_active(Window *window) {
 }
 
 static void init_WM() {
+
     u8 wcode = ascii_to_keycode['w'];
     u8 dcode = ascii_to_keycode['d'];
     u8 scode = ascii_to_keycode['s'];
@@ -963,11 +926,6 @@ static void init_WM() {
     u8 onecode = ascii_to_keycode['1'];
 
     bool *key_state_matrix = get_key_state_matrix();
-
-    // struct file *ptica = open('A',"./ptica.zi");
-    // int size = ptica->getsize(ptica);
-    // struct image *ptica_img = alloc(size);
-    // ptica->read(ptica, ptica_img, size, 0);
 
     bool old_window = false;
 
@@ -981,11 +939,17 @@ static void init_WM() {
 
     memset(second_buffer, 0, second_buffer_size);
 
+    desktop_background_buffer = 0;
+    memset(windows, 0, sizeof(windows));
+    window_count = 0; active_window = 0;
+    prev_mouse_x = prev_mouse_y = -1;
+    changed = false;
+
     build_desktop_background();
     clearframe();
 
     dirty_rect_union(0, 0, fb->screen_width, fb->screen_height);
-    compositor_present();
+    wm_render();
 
     s32 old_mouse_x = get_mouse_x();
     s32 old_mouse_y = get_mouse_y();
@@ -993,15 +957,15 @@ static void init_WM() {
     s32 old_left = 0;
     s32 old_right = 0;
 
-    u32 drag_offsets_x;
-    u32 drag_offsets_y;
-    s32 old_width, old_height;
+    u32 drag_offsets_x = 0;
+    u32 drag_offsets_y = 0;
+    s32 old_width = 0, old_height = 0;
     s32 resize_start_x = 0, resize_start_y = 0;
-    s32 old_x, old_y = 0;
+    s32 old_x = 0, old_y = 0;
 
     bool dragging = false;
     bool size_changed = false;
-    bool on_left, on_right, on_top, on_down;
+    bool on_left = false, on_right = false, on_top = false, on_down = false;
 
     fps_last_tick = getticks();
 
@@ -1029,13 +993,13 @@ static void init_WM() {
                     break;
                 }
             }
-        }   
+        }
 
         if (left_pressed) {
             Window *hit = 0;
             for (u32 i = window_count; i > 0; i--){
                 Window *window = z_order[i - 1];
-                
+
                 if (window->invisible)
                     continue;
 
@@ -1078,7 +1042,6 @@ static void init_WM() {
 
                     if ((drag_offsets_x - close) * (drag_offsets_x - close) + (drag_offsets_y - 10) * (drag_offsets_y - 10) <= 49) {
                         window_destroy(hit);
-                        
                         tittle_button_clicked = true;
                     }
 
@@ -1181,11 +1144,11 @@ static void init_WM() {
             size_changed = false;
             dragging = false;
         }
-    
+
         bool mouse_changed = mouse_x != old_mouse_x || mouse_y != old_mouse_y;
 
         if (changed || mouse_changed) {
-            compositor_present();
+            wm_render();
 
             old_mouse_x = mouse_x;
             old_mouse_y = mouse_y;
@@ -1218,6 +1181,7 @@ INIT void init(void* _resolve_function(char* name))
     create_task = _resolve_function("_create_task");
     yield = _resolve_function("_yield");
     kill = _resolve_function("_kill");
+    unload_mod = _resolve_function("_unload_mod");
     get_key_state_matrix = _resolve_function("_get_key_state_matrix");
 
     register_function("_window_create", window_create, "Create window");
@@ -1230,10 +1194,9 @@ INIT void init(void* _resolve_function(char* name))
     register_function("_draw_border_window", draw_border_window, "Draw border for window");
     register_function("_compositor_present", compositor_present, "Draw in main framebuffer");
     register_function("_window_is_active", window_is_active, "Check active window");
-    // register_function("_desktop_fill_rect", desktop_fill_rect, "Using for draw icon");
-    // register_function("_desktop_draw_string", desktop_draw_string, "Using for draw icon");
-    // register_function("_desktop_register_icon", desktop_register_icon, "Register icon in desktop");
-    
-    // desktop_register_icon
+    register_function("_window_resize", window_resize, "Change size window");
+
     create_task("Windows_Manager", init_WM);
 }
+
+//_kill;i:

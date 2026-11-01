@@ -156,7 +156,8 @@ void main(i_ptr addr, u32 magic)
     register_function("_get_tasks",get_tasks,"_get_tasks() -> struct task*");
     register_function("_kill",kill,"_kill(u32 tid) -> bool success");
     register_function("_exec_line",exec_line,"_exec_line(char* command)");
-    //register_function("_set_preemptive_mode",set_preemptive_mode,"_set_preemptive_mode(bool e) -> None");
+
+    register_function("map",debug_heap,"");
 
     LOGI("kernel api registred");
 

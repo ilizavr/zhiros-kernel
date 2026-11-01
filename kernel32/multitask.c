@@ -9,6 +9,10 @@
 #include "interrupt.h"
 #include "allocator.h"
 #include "multitask.h"
+#include "linker.h"
+
+extern volatile struct module_info modulelist[256];
+extern volatile u32 curmod;
 
 struct task tasks[MAX_TASKS] = {0};
 int current_task_idx = 0;
@@ -33,6 +37,17 @@ struct task* create_task(char *name, void* function)
             tasks[i].tid = i + 1;
             tasks[i].name = strdup_c(name);
             tasks[i].stack_base = kalloc(STACK_SIZE);
+            tasks[i].module_idx = -1;
+
+            u32 entry = (u32)function;
+            for (u32 module_idx = 0; module_idx < curmod; module_idx++) {
+                u32 start = (u32)modulelist[module_idx].start;
+
+                if (entry >= start && entry - start < modulelist[module_idx].size) {
+                    tasks[i].module_idx = module_idx;
+                    break;
+                }
+            }
 
             u32 *esp = (u32*)(tasks[i].stack_base + STACK_SIZE);
 

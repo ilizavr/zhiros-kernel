@@ -94,8 +94,6 @@ static void putchar_color_hook(char chr, u32 color)
 
 
 
-
-
 static struct fb_info* getfb_hook()
 {
     struct fb_info* ret = alloc(sizeof(struct fb_info));

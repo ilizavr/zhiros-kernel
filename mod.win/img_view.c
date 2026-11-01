@@ -17,29 +17,37 @@ void (*compositor_present)();
 bool (*window_is_active)(Window *window);
 void (*desktop_fill_rect)(s32 x, s32 y, s32 width, s32 height, u32 color);
 void (*desktop_draw_string)(const char *text, u32 x, u32 y, u32 color);
+void (*window_resize)(Window *window, s32 new_width, s32 new_height);
 
-
-static Window *img_window;
 static struct task *img_task;
 
 static void img_thread() {
-    img_window = window_create("img");
-    img_window->task = img_task;
-
-    struct file *f = open('A', "./logo.zi");
-    if (!f) {
-        window_render(img_window);
+    while(1) {
         compositor_present();
+        yield();
+    }
+}
+
+static void img_f(char diskletter, char* name)
+{
+    struct file *f = open(diskletter, name);
+    if (!f) {
         return;
     }
+
+    char * dupname = alloc(strlen(name)+1);
+    strcpy(dupname, name);
+
+    struct Window *img_window = window_create(dupname);
+    img_window->task = 0;
 
     int size = f->getsize(f);
     struct image *img = alloc(size);
     f->read(f, img, size, 0);
     f->close(f);
 
-    img_window->width = img->width;
-    img_window->height = img->height;
+    window_resize(img_window,img->width,img->height);
+    img_window->window_on_changed = 1;
 
     window_render(img_window);
 
@@ -51,14 +59,7 @@ static void img_thread() {
     }
 
     free(img);
-
-    while(1) {
-        compositor_present();
-        yield();
-    }
 }
-
-
 
 
 INIT void init(void* _resolve_function(char* name))
@@ -73,6 +74,10 @@ INIT void init(void* _resolve_function(char* name))
     window_is_active = _resolve_function("_window_is_active");
     desktop_fill_rect = _resolve_function("_desktop_fill_rect");
     desktop_draw_string = _resolve_function("_desktop_draw_string");
+    window_resize = _resolve_function("_window_resize");
+
+    if(_resolve_function("_img")) replace_function("_img", img_f);
+    else register_function("_img", img_f, "_img;c:diskletter;name. view image");
 
     img_task = create_task("img", img_thread);
 }

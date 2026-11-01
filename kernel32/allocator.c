@@ -7,6 +7,7 @@
 #include "allocator.h"
 #include "panic.h"
 #include "printf.h"
+#include "../lib/string.h"
 
 extern char _kernel_end[];
 extern char _kernel_start[];
@@ -23,9 +24,9 @@ PAK struct memoryblock
     struct memoryblock *next;
 };
 
-volatile struct memoryblock headblock = {0,1,0,0};
-volatile struct memoryblock *footblock = &headblock;
-
+struct memoryblock headblock = {0,1,0,0};
+struct memoryblock *footblock = &headblock;
+i_ptr available_memory = 0;
 
 void *kalloc(u32 size)
 {
@@ -55,13 +56,14 @@ void *kalloc(u32 size)
         current = current->next;
     }
 
+    //kernel_panic_text("memory not found");
+
     restore_irq(eflags);
     return 0;
 
 }
 
-
-bool free(void *addr)//FIXME: anti fragmentation
+bool free(void *addr)
 {
     u32 eflags = save_irq();
     if(!addr) {
@@ -75,9 +77,27 @@ bool free(void *addr)//FIXME: anti fragmentation
     }
     block->allocated = 0;
 
+    if((i_ptr)block->next == ((i_ptr)block+block->size+sizeof(struct memoryblock)) && block->next->allocated == 0)
+    {
+        block->size+=block->next->size+sizeof(struct memoryblock);
+        if(block->next->next)block->next->next->prev = block;
+        block->next=block->next->next;
+    }
+    if(block->prev&&block->prev->allocated == 0)
+    {
+        block=block->prev;
+
+        if((i_ptr)block->next != ((i_ptr)block+block->size+sizeof(struct memoryblock))) goto END;
+
+        block->size+=block->next->size+sizeof(struct memoryblock);
+        if(block->next->next)block->next->next->prev = block;
+        block->next=block->next->next;
+    }
+    END:
     restore_irq(eflags);
     return true;
 }
+
 
 volatile i_ptr memory = 0;
 
@@ -155,19 +175,19 @@ i_ptr get_used_memory()
     return memory-get_available_memory();
 }
 
-// void debug_heap()
-// {
-//     i_ptr available_memory = 0;
-//     u32 eflags = save_irq();
-//     struct memoryblock *current = headblock.next;
-//
-//     for(int i = 0;current;i++)
-//     {
-//         printf("%u. free block %x-%x(size %u)\n",i,current,(i_ptr)current+current->size,current->size);
-//         available_memory += current->size;
-//         current = current->next;
-//     }
-//
-//     restore_irq(eflags);
-//     printf("free memory:%u. used memory:%u\n",available_memory,memory-available_memory);
-// }
+void debug_heap()
+{
+    i_ptr available_memory = 0;
+    u32 eflags = save_irq();
+    struct memoryblock *current = headblock.next;
+
+    for(int i = 0;current;i++)
+    {
+        printf("%u. free block %x-%x(size %u)\n",i,current,(i_ptr)current+current->size,current->size);
+        available_memory += current->size;
+        current = current->next;
+    }
+
+    restore_irq(eflags);
+    printf("free memory:%u. used memory:%u\n",available_memory,memory-available_memory);
+}
