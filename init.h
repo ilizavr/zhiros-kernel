@@ -10,7 +10,7 @@ printf("select graphics mode(M - mac(NEUROSLOP), T - tinerkotl wm, C - console):
 while(true){
     char mode = getchar();
     if(mode == 'M') {
-        load_mod(ramdisk_letter,"./mac.mod");
+        load_mod(ramdisk_letter,"./mac.mod"); // NEUROSLOP WARNING
         load_mod(ramdisk_letter,"./term.mod");
         load_mod(ramdisk_letter,"./img_view.mod");
         break;
