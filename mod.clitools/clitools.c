@@ -293,7 +293,7 @@ static void ls(char diskletter, char* name) {
 static void writefile(char diskletter, char* name) {
     struct file * ff = open(diskletter,name);
     if(!ff && create_file) ff = create_file(diskletter,name);
-    if(!ff || !create_file || !ff->write) LOGE("fs not support this");
+    if(!ff || !create_file || !ff->write) { LOGE("fs not support this"); return; }
 
     printf("to stop writing enter Q\n");
 
