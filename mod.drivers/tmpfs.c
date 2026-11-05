@@ -1,10 +1,19 @@
 /*
- * Copyright (c) 2026 TINERKOTL & ilizavr & yellowhat
+ * Copyright (c) 2026 ilizavr & TINERKOTL & yellowhat
  * SPDX-License-Identifier: MIT
  */
 
+#include "../mod.win/WM_types.h"
 #include "../lib/zhirapi.h"
-#include "../lib/string.h"
+
+Window* (*window_create)(char *name);
+void (*window_render)(Window *window);
+void (*clearframe_win)(Window *window, u32 color);
+void (*window_fill_rect)(Window *window, u32 x, u32 y, u32 width, u32 height, u32 color);
+void (*draw_string)(Window *window, const char *str, u32 x, u32 heght, u32 color);
+void (*draw_border_window)(Window *window, u32 color);
+void (*compositor_present)();
+bool (*window_is_active)(Window *window);
 
 struct tmpfs_node {
     char *name;
@@ -35,36 +44,39 @@ static u32 tmpfs_getsize(struct file *file) {
 static u32 tmpfs_write(struct file *file, void* buffer, u32 size, u32 offset) {
     if (!file || !buffer || !file->other_info || !size)
         return 0;
-    
+
     struct tmpfs_node *node = file->other_info;
     if (node->type == 0) {
         if (size > 0xFFFFFFFF - offset)
             return 0;
 
         u32 last_position = offset + size;
-        
+
         if (last_position > node->capacity){
             u8 *new_data = alloc(last_position);
             if (!new_data)
                 return 0;
-            
-            memcpy(new_data, node->data, node->size);
-            free(node->data);
+
+            if (node->data){
+                memcpy(new_data, node->data, node->size);
+                free(node->data);
+            }
             node->capacity = last_position;
             node->data = new_data;
         }
 
+        memcpy(node->data + offset, buffer, size);
+
         if (offset > node->size) {
             for (u32 i = node->size; i < offset; i++)
                 node->data[i] = '\0';
-            
+
             node->size = offset;
         }
 
+
         if (last_position > node->size)
             node->size = last_position;
-
-        memcpy(node->data + offset, buffer, size);
 
         return size;
     } else {
@@ -75,7 +87,7 @@ static u32 tmpfs_write(struct file *file, void* buffer, u32 size, u32 offset) {
 static struct tmpfs_node *tmpfs_find_child(struct tmpfs_node *parent, const char *name, u32 name_len){
     if (!parent || !name || !name_len)
         return 0;
-    
+
     for (struct tmpfs_node *node = parent->children; node; node = node->next_sibling){
         if (strlen(node->name) == name_len && strncmp(node->name, name, name_len) == 0)
             return node;
@@ -87,7 +99,7 @@ static struct tmpfs_node *tmpfs_find_child(struct tmpfs_node *parent, const char
 static struct tmpfs_node *tmpfs_find_path(struct tmpfs *fs, const char *path) {
     if (!fs || !path || !fs->root)
         return 0;
-    
+
     struct tmpfs_node *node = fs->root;
 
     while (*path == '/')
@@ -97,27 +109,27 @@ static struct tmpfs_node *tmpfs_find_path(struct tmpfs *fs, const char *path) {
         const char *component = path;
         while (*path && *path != '/')
             path++;
-        
+
         u32 component_len = path - component;
 
         if (!node->type)
             return 0;
-        
+
         node = tmpfs_find_child(node, component, component_len);
         if(!node)
             return 0;
-        
+
         while (*path == '/')
             path++;
     }
-    
+
     return node;
 }
 
 static bool tmpfs_close(struct file *file) {
     if (!file)
         return false;
-    
+
     return free(file);
 }
 
@@ -160,7 +172,7 @@ static u32 tmpfs_read(struct file *file, void* buffer, u32 size, u32 offset) {
     } else {
         if (!node->data || offset >= node->size)
             return 0;
-        
+
         u32 availble = node->size - offset;
         u32 to_read = size < availble ? size : availble;
 
@@ -177,23 +189,23 @@ static struct file *tmpfs_mkdir(struct disk *disk, char *path){
     struct tmpfs *fs = disk->fs_info;
     if (!fs->root)
         return 0;
-    
+
     u32 path_len = strlen(path);
     char *path_copy = alloc(path_len + 1);
     if (!path_copy)
         return 0;
-    
+
     memcpy(path_copy, path, path_len + 1);
 
     char *p = path_copy;
     while (*p == '/')
         p++;
-    
+
     char *last_slash = 0; //ищет последний компонент (папку)
     for (char *c = p; *c; c++)
         if(*c=='/')
             last_slash = c;
-    
+
     char *parent_path;
     char *dir_name;
     u32 dir_name_len;
@@ -220,13 +232,13 @@ static struct file *tmpfs_mkdir(struct disk *disk, char *path){
         free(path_copy);
         return 0;
     } //родитель или каталог не найден
-    
+
     if (tmpfs_find_child(parent, dir_name, dir_name_len))
     {
         free(path_copy);
         return 0;
     } //уже существет папка
-    
+
     struct tmpfs_node *node = alloc(sizeof(*node));
     struct file *file = alloc(sizeof(*file));
 
@@ -308,23 +320,23 @@ static struct file *tmpfs_create_file(struct disk *disk, char *path){
     struct tmpfs *fs = disk->fs_info;
     if (!fs->root)
         return 0;
-    
+
     u32 path_len = strlen(path);
     char *path_copy = alloc(path_len + 1);
     if (!path_copy)
         return 0;
-    
+
     memcpy(path_copy, path, path_len + 1);
 
     char *p = path_copy;
     while (*p == '/')
         p++;
-    
+
     char *last_slash = 0; //ищет последний компонент (папку)
     for (char *c = p; *c; c++)
         if(*c=='/')
             last_slash = c;
-    
+
     char *parent_path;
     char *file_name;
     u32 file_name_len;
@@ -351,13 +363,13 @@ static struct file *tmpfs_create_file(struct disk *disk, char *path){
         free(path_copy);
         return 0;
     } //родитель или каталог не найден
-    
+
     if (tmpfs_find_child(parent, file_name, file_name_len))
     {
         free(path_copy);
         return 0;
     } //уже существет файл
-    
+
     struct tmpfs_node *node = alloc(sizeof(*node));
     struct file *file = alloc(sizeof(*file));
 
@@ -436,16 +448,34 @@ static char mount_tmpfs(struct tmpfs *fs) {
     return fs->mount_letter;
 }
 
+static char find_tmpfs_letter(void) {
+    for (u32 i = 0; i < MAX_DISK_COUNT; i++) {
+        struct disk *disk = getdisk(i);
+
+        if (disk && disk->name &&
+            disk->name[0] == 't' &&
+            disk->name[1] == 'm' &&
+            disk->name[2] == 'p' &&
+            disk->name[3] == 'f' &&
+            disk->name[4] == 's' &&
+            disk->name[5] == '\0')
+            return disk->mountletter;
+    }
+
+    return 0;
+}
+
 static struct tmpfs tmpfs_instance;
 
 INIT void init(void* _resolve_function(char* name))
 {
     api_init(_resolve_function);
+    register_function("_find_letter", find_tmpfs_letter, "");
 
     if (!mount_tmpfs(&tmpfs_instance))
         return;
-    LOGI("tmpfs mounted %c", tmpfs_instance.mount_letter);
+    LOGI("tmpfs: mounted %c", tmpfs_instance.mount_letter);
     diskadd(tmpfs_instance.vfs_disk);
 
-    //create_file(tmpfs_instance.mount_letter, "hi");
+    //create_file(tmpfs_instance.mount_letter, "/first.py");
 }
