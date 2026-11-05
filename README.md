@@ -42,8 +42,8 @@
 - bios disk driver - готов и интегрирован в этот репозиторий
 - mbr - готов и интегрирован в этот репозиторий
 - network - готов - https://github.com/ukdaemonz/zhiros-kernel
-- windowmanager+zhirGL - разработка ведется - https://github.com/TINERKOTL/zhiros-module-example
-- zhir-vm(jit vm для memorysafe языка) - разработка ведется - https://github.com/bust6k/ZhirVM
+- windowmanager+zhirGL - готов - https://github.com/TINERKOTL/zhiros-module-example
+- zhir-vm(jit vm для memorysafe языка) - готов - https://github.com/bust6k/ZhirVM
 - fat16 - скоро
 - unixbox(слой совместимости для unix-подобных программ) - в планах
 
