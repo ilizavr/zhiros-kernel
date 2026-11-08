@@ -3,17 +3,8 @@
  * SPDX-License-Identifier: MIT
  */
 
-#include "../mod.win/WM_types.h"
 #include "../lib/zhirapi.h"
-
-Window* (*window_create)(char *name);
-void (*window_render)(Window *window);
-void (*clearframe_win)(Window *window, u32 color);
-void (*window_fill_rect)(Window *window, u32 x, u32 y, u32 width, u32 height, u32 color);
-void (*draw_string)(Window *window, const char *str, u32 x, u32 heght, u32 color);
-void (*draw_border_window)(Window *window, u32 color);
-void (*compositor_present)();
-bool (*window_is_active)(Window *window);
+#include "../lib/string.h"
 
 struct tmpfs_node {
     char *name;
@@ -472,10 +463,7 @@ INIT void init(void* _resolve_function(char* name))
     api_init(_resolve_function);
     register_function("_find_letter", find_tmpfs_letter, "");
 
-    if (!mount_tmpfs(&tmpfs_instance))
-        return;
+    if (!mount_tmpfs(&tmpfs_instance)) LOGE("tmpfs: error");
     LOGI("tmpfs: mounted %c", tmpfs_instance.mount_letter);
     diskadd(tmpfs_instance.vfs_disk);
-
-    //create_file(tmpfs_instance.mount_letter, "/first.py");
 }

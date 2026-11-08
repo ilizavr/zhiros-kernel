@@ -1,0 +1,28 @@
+// while + if/else.
+var u32 i = 0
+var u32 sum = 0
+
+whl (i < 5) {
+    sum = sum + i
+    i = i + 1
+}
+
+if (sum == 10) {
+    println("sum=%u", sum)
+} else {
+    println("bad sum")
+}
+
+if (i >= 5 && i != 0) {
+    println("loop-ok")
+}
+
+// Nested if / else-if.
+var u32 n = 2
+if (n == 0) {
+    println("zero")
+} else if (n == 1) {
+    println("one")
+} else {
+    println("many")
+}

@@ -32,7 +32,14 @@ void* resolve_function(char * function_name)
 	return 0;
 }
 
-void register_function(char *function_name, void* call, char *description)
+void edit_caller(u8* caller, void* address)
+{
+	i_ptr offset = (i_ptr)address - ((i_ptr)caller + 5);
+	*(i_ptr*)(caller + 1) = offset;
+	*caller = 0xE9;//JMP
+}
+
+void register_function(char *function_name, void* fnc, char *description)
 {
 	u32 eflags = save_irq();
 	struct function_info * newfnc = kalloc(sizeof(struct function_info));
@@ -42,7 +49,8 @@ void register_function(char *function_name, void* call, char *description)
 	if(description)newfnc->description = strdup_c(description);
 	else newfnc->description = "";
 
-	newfnc->call = call;
+	newfnc->call = fnc;
+
 	head_fnc = newfnc;
 	restore_irq(eflags);
 }
@@ -88,13 +96,19 @@ bool replace_function(char* function_name, void* newfnc)
 {
 	u32 eflags = save_irq();
 
-	u8* oldfnc = (u8*)resolve_function(function_name);
-	if (!oldfnc || !newfnc) {restore_irq(eflags); return false;}
+	struct function_info * current = head_fnc;
+	while(current)
+	{
+		if(strcmp(current->name, function_name) == 0){
+			edit_caller(current->call, newfnc);
+			current->call = newfnc;
 
-	i_ptr offset = (i_ptr)newfnc - ((i_ptr)oldfnc + 5);
-	*(i_ptr*)(oldfnc + 1) = offset;
-	*oldfnc = 0xE9;//JMP
+			restore_irq(eflags);
+			return true;
+		}
+		current=current->next;
+	}
 
 	restore_irq(eflags);
-	return true;
+	return 0;
 }

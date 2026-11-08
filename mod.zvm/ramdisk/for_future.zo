@@ -1,0 +1,25 @@
+var u32 foo = 5
+var u8 bar = 2 + 3 * 4
+var str name = "zhir"
+varar u32 arr
+
+foo = 5
+foo = 1 + 2 * 3
+foo = (1 + 2) * 3
+foo = -5 + ~2
+foo = a == b && c != d
+
+arr[0] = 7
+arr[1 + 2] = 42
+arr[foo] = arr[0] + arr[1] 
+
+//udf - User-Defined-Function. That function must return any value from itself
+udf something(a,b,c){
+return a +  b + c
+}
+
+//udp - User-Defined-Procedure. That function must not return any value,really mustn't... at all!
+udp so(well) {
+//its maximum  - just print some value
+print(well)
+}

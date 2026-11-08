@@ -11,3 +11,4 @@ extern void allocator_add_page(i_ptr start, i_ptr end, i_ptr modulestart, i_ptr 
 API extern i_ptr get_available_memory();
 API extern i_ptr get_used_memory();
 API extern void debug_heap();
+API extern struct memoryblock * get_first_block();

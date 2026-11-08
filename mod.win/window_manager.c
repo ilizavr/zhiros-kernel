@@ -4,15 +4,15 @@
  */
 
 /*
- Э то основн*ой модуль Windows Manager.
-
- Если у вас есть замечания, идеи как можно оптимизировать или какие-нибудь новые функции.
- Пишите мне в ТГ (ссылка в описании на github) или в самом github в кладке "issues".
-
- Если вы пишите приложение, добавляйте их в свой репозиторий и пишите мне, чтобы я добавил вас, как создателя того или иного приложения.
- В будущем будет создан сайт, где будут добавлены все приложения и их создатели.
-
- Удачи в написании приложений, жду ваши работы.
+ * Э то основн*ой модуль Windows Manager.
+ *
+ * Если у вас есть замечания, идеи как можно оптимизировать или какие-нибудь новые функции.
+ * Пишите мне в ТГ (ссылка в описании на github) или в самом github в кладке "issues".
+ *
+ * Если вы пишите приложение, добавляйте их в свой репозиторий и пишите мне, чтобы я добавил вас, как создателя того или иного приложения.
+ * В будущем будет создан сайт, где будут добавлены все приложения и их создатели.
+ *
+ * Удачи в написании приложений, жду ваши работы.
  */
 
 
@@ -70,6 +70,10 @@ s32 first_icon_x = 24, first_icon_y = 24, icon_size = 40;
 DesktopIcon desktop_icons[MAX_DESKTOP_ICONS];
 u32 desktop_icon_count = 0;
 
+static s32 SW, SH, PP;
+static u32 *sb;
+static u32 *vram;
+
 // static bool desktop_register_icon(u32 x, u32 y, u32 size, DesktopIconDraw draw) {
 //     if (!draw || desktop_icon_count >= MAX_DESKTOP_ICONS)
 //         return false;
@@ -77,6 +81,14 @@ u32 desktop_icon_count = 0;
 //     desktop_icons[desktop_icon_count++] = (DesktopIcon){x, y, size, draw};
 //     return true;
 // }
+
+static inline void cpy32(void *d, const void *s, u32 n) {
+    asm volatile("rep movsl" : "+D"(d), "+S"(s), "+c"(n) : : "memory");
+}
+
+static inline void set32(void *d, u32 v, u32 n) {
+    asm volatile("rep stosl" : "+D"(d), "+c"(n) : "a"(v) : "memory");
+}
 
 static s32 dirty_min(s32 a, s32 b) {
     return a < b ? a : b;
@@ -147,11 +159,23 @@ static void build_desktop_background() {
             return;
     }
 
-    u32 *pix = desktop_background_buffer;
+    const u32 grid = 24;
+    const u32 line = 0xFF4A2D2D;
+    const u32 fill = 0xFF1A1A1A;
 
-    for (u32 y = 0; y < fb->screen_height; y++) {
-        for (u32 x = 0; x < fb->screen_width; x++) {
-            pix[y * (fb->screen_pitch / 4) + x] = desktop_pattern_color(x, y);
+    for (u32 y = 0; y < SH; y++) {
+        u32 *row = desktop_background_buffer + y * PP;
+
+        if (y % grid < 2) {
+            set32(row, line,SW);
+            continue;
+        }
+
+        set32(row, fill, SW);
+
+        for (u32 x = 0; x < SW; x += grid) {
+            u32 n = (x + 2 <= SW) ? 2 : 1;
+            set32(row + x, line, n);
         }
     }
 }
@@ -233,7 +257,7 @@ static void fps_on_present(void) {
     fps_frames++;
 
     u32 now = getticks();
-    u32 elapsed = now - fps_last_tick; // корректно и при переполнении u32
+    u32 elapsed = now - fps_last_tick;
 
     if (elapsed >= 1000) {
         fps_value = fps_frames * 1000 / elapsed;
@@ -249,6 +273,14 @@ static Window *free_window_slot() {
     }
 
     return 0;
+}
+
+static s32 win_rows(Window *window) {
+    if (!window || !window->buffer || window->width <= 0)
+        return 0;
+
+    s32 r = (s32)(window->buffer_size / (u32)window->width);
+    return r < window->height ? r : window->height;
 }
 
 static Window *window_create(char *name) {
@@ -277,13 +309,16 @@ static Window *window_create(char *name) {
     if(!window->buffer)
         return 0;
 
-    memset(window->buffer, 0, window->buffer_size*sizeof(u32));
+    set32(window->buffer, 0x00000000, window->buffer_size);
 
     z_order[window_count] = window;
 
     window_count++;
 
     active_window = window;
+
+    dirty_rect_union(window->x, window->y, window->width, window->height);
+    changed = true;
 
     return window;
 }
@@ -302,21 +337,17 @@ static void restore_rect_from_background(s32 x, s32 y, s32 w, s32 h) {
         y = 0;
     }
 
-    if (x + w > (s32)fb->screen_width)
-        w = (s32)fb->screen_width - x;
+    if (x + w > (s32)SW)
+        w = (s32)SW - x;
 
-    if (y + h > (s32)fb->screen_height)
-        h = (s32)fb->screen_height - y;
+    if (y + h > (s32)SH)
+        h = (s32)SH - y;
 
     if (w <= 0 || h <= 0)
         return;
 
     for (s32 row = 0; row < h; row++) {
-        u8 *dst = second_buffer + (y + row) * fb->screen_pitch + x * fb->bpp;
-        u8 *src = (u8 *)desktop_background_buffer +
-        ((y + row) * (fb->screen_pitch / 4) + x) * sizeof(u32);
-
-        memcpy(dst, src, (u32)w * sizeof(u32));
+        cpy32(sb + (u32)(y + row) * PP + (u32)x, desktop_background_buffer + (u32)(y + row) * PP + (u32)x, (u32)w);
     }
 
     dirty_rect_union(x, y, w, h);
@@ -348,22 +379,22 @@ static void present_framebuffer() {
         y = 0;
     }
 
-    if (x + w > (s32)fb->screen_width)
-        w = (s32)fb->screen_width - x;
+    if (x + w > (s32)SW)
+        w = (s32)SW - x;
 
-    if (y + h > (s32)fb->screen_height)
-        h = (s32)fb->screen_height - y;
+    if (y + h > (s32)SH)
+        h = (s32)SH - y;
 
     if (w <= 0 || h <= 0) {
         dirty.valid = false;
         return;
     }
 
-    u8 *src = second_buffer + (y * fb->screen_pitch) + (x * fb->bpp);
-    u8 *dst = ((u8 *)fb->fb_addr) + (y * fb->screen_pitch) + (x * fb->bpp);
+    u32 *src = sb + (u32)y * PP + (u32)x;
+    u32 *dst = vram + (u32)y * PP + (u32)x;
 
     for (s32 row = 0; row < h; row++) {
-        memcpy(dst + row * fb->screen_pitch, src + row * fb->screen_pitch, (u32)w * fb->bpp);
+        cpy32(dst + (u32)row * PP, src + (u32)row * PP, (u32)w);
     }
 
     dirty.valid = false;
@@ -375,35 +406,27 @@ static void clearframe_win(Window *window, u32 color) {
     if (!window || !window->buffer)
         return;
 
-    for (u32 x = 0; x < window->width; x++)
-        window->buffer[x] = color;
-
-    for (u32 y = 1; y < window->height; y++) {
-        memcpy(&window->buffer[y * window->width], window->buffer, window->width * sizeof(u32));
-    }
+    set32(window->buffer, color, window->buffer_size);
 }
 
 static void clearframe() {
-    memcpy_wc(second_buffer, desktop_background_buffer, fb->screen_height*fb->screen_pitch);
+    cpy32(sb, desktop_background_buffer, SH*PP);
 }
 
-static void put_pixel_window(Window *window, u32 x, u32 y, u32 color)
-{
+static void put_pixel(u32 x, u32 y, u32 color) {
+    if (x >= SW || y >= SH) return;
+
+    sb[y * PP + x] = color | 0xFF000000;
+}
+
+static void put_pixel_window(Window *window, u32 x, u32 y, u32 color) {
     if (x >= window->width || y >= window->height)
         return;
 
     window->buffer[y * window->width + x] = color;
 }
 
-static void put_pixel(u32 x, u32 y, u32 color) {
-    if (x >= fb->screen_width || y >= fb->screen_height) return;
-
-    u32 *pixel = (u32*)(second_buffer + y * fb->screen_pitch + x * fb->bpp);
-    *pixel = color | 0xFF000000;
-}
-
-static void draw_char(Window *window, u8 code, u32 x, u32 y, u32 color)
-{
+static void draw_char(Window *window, u8 code, u32 x, u32 y, u32 color) {
     for (u32 row = 0; row < 16; row++) {
         for (u32 col = 0; col < 8; col++) {
             if (font8x16[16*code + row] & (0x80 >> col))
@@ -412,8 +435,7 @@ static void draw_char(Window *window, u8 code, u32 x, u32 y, u32 color)
     }
 }
 
-static void draw_char_bg(Window *window, u8 code, u32 x, u32 y, u32 color, u32 bgcolor)
-{
+static void draw_char_bg(Window *window, u8 code, u32 x, u32 y, u32 color, u32 bgcolor) {
     for (u32 row = 0; row < 16; row++) {
         for (u32 col = 0; col < 8; col++) {
             if (font8x16[16*code + row] & (0x80 >> col))
@@ -434,14 +456,35 @@ static void draw_string(Window *window, const char *str, u32 x, u32 y, u32 color
 }
 
 static void draw_border_window(Window *window, u32 color) {
-    for (s32 x = 0; x < window->width; x++) {
-        put_pixel(window->x + x, window->y, color);
-        put_pixel(window->x + x, window->y + window->height - 1, color);
+    s32 wx = window->x;
+    s32 wy = window->y;
+    s32 ww = window->width;
+    s32 wh = window->height;
+
+    if (ww <= 0 || wh <= 0)
+        return;
+
+    s32 x0 = wx < 0 ? 0 : wx;
+    s32 x1 = wx + ww > (s32)SW ? (s32)SW : wx + ww;
+
+    if (x0 < x1) {
+        if (wy >= 0 && wy < (s32)SH)
+            set32(sb + (u32)wy*PP + (u32)x0, color, (u32)(x1 - x0));
+        if (wy + wh - 1 >= 0 && wy + wh - 1 <(s32)SH)
+            set32(sb + (u32)(wy + wh - 1) * PP + (u32)x0, color, (u32)(x1 - x0));
     }
 
-    for (s32 y = 1; y + 1 < window->height; y++) {
-        put_pixel(window->x, window->y + y, color);
-        put_pixel(window->x + window->width - 1, window->y + y, color);
+    s32 y0 = wy < 0 ? 0 : wy;
+    s32 y1 = wy + wh > (s32)SH ? (s32)SH : wy + wh;
+    s32 xl = wx;
+    s32 xr = wx + ww - 1;
+
+    for (s32 yy = y0; yy < y1; yy++){
+        u32 *row = sb + (u32)yy * PP;
+        if (xl >= 0 && xl < (s32)SW)
+            row[xl] = color;
+        if (xr >= 0 && xr < (s32)SW && xr != xl)
+            row[xr] = color;
     }
 }
 
@@ -450,7 +493,7 @@ static void window_fill_rect(Window *window, u32 x, u32 y, u32 width, u32 height
     if (!window || !window->buffer || window->width <= 0)
         return;
 
-    s32 rows = (s32)(window->buffer_size / (u32)window->width);
+    s32 rows = win_rows(window);
     if (rows > window->height)
         rows = window->height;
     if (rows <= 0)
@@ -468,14 +511,12 @@ static void window_fill_rect(Window *window, u32 x, u32 y, u32 width, u32 height
         return;
 
     u32 w32 = (u32)window->width;
-    u32 *first_row = &window->buffer[(u32)sy * w32 + (u32)sx];
+    u32 *first_row = window->buffer + (u32)sy * w32 + (u32)sx;
 
-    for (s32 i = 0; i < sw; i++)
-        first_row[i] = color;
+    set32(first_row, color, (u32)sw);
 
     for (s32 row = 1; row < sh; row++) {
-        memcpy(&window->buffer[(u32)(sy + row) * w32 + (u32)sx],
-               first_row, (u32)sw * sizeof(u32));
+        cpy32(window->buffer + (u32)(sy + row) * w32 + (u32)sx, first_row, (u32)sw);
     }
 }
 
@@ -489,18 +530,14 @@ static void present_window(Window *window) {
     s32 copy_height = window->height;
 
     if (window->full_screen) {
-        s32 h = copy_height < (s32)fb->screen_height ? copy_height : (s32)fb->screen_height;
-        u32 row_bytes = (u32)copy_width * sizeof(u32);
-        if (row_bytes > fb->screen_pitch)
-            row_bytes = fb->screen_pitch;
+        s32 h = copy_height < (s32)SH ? copy_height : (s32)SH;
+        u32 n = copy_width < (s32)PP ? copy_width : (s32)PP;
 
         for (s32 row = 0; row < h; row++) {
-            u8 *dst = second_buffer + row * fb->screen_pitch;
-            u8 *src = (u8 *)&window->buffer[row * window->width];
-            memcpy(dst, src, row_bytes);
+            cpy32(sb + (u32)row * PP, window->buffer + (u32)row * (u32)window->width, (u32)n);
         }
 
-        dirty_rect_union(0, 0, fb->screen_width, fb->screen_height);
+        dirty_rect_union(0, 0, SW, SH);
         return;
     }
 
@@ -516,63 +553,104 @@ static void present_window(Window *window) {
         dst_y = 0;
     }
 
-    if (dst_x + copy_width > (s32)fb->screen_width)
-        copy_width = fb->screen_width - dst_x;
+    if (dst_x + copy_width > (s32)SW)
+        copy_width = SW - dst_x;
 
-    if (dst_y + copy_height > (s32)fb->screen_height)
-        copy_height = fb->screen_height - dst_y;
+    if (dst_y + copy_height > (s32)SH)
+        copy_height = SH - dst_y;
 
     if (copy_width <= 0 || copy_height <= 0)
         return;
 
     dirty_rect_union(dst_x, dst_y, copy_width, copy_height);
 
+    u32 *dst = sb + (u32)dst_y * (u32)PP + (u32)dst_x;
+    u32 *src = window->buffer + (u32)src_y * (u32)window->width + (u32)src_x;
+
     for (s32 y = 0; y < copy_height; y++) {
-        u8 *dst = second_buffer + (dst_y + y) * fb->screen_pitch + dst_x * fb->bpp;
-
-        u8 *src =(u8*)&window->buffer[(src_y + y) * window->width + src_x];
-
-        memcpy(dst, src, copy_width * sizeof(u32));
+        cpy32(dst, src, copy_width);
+        dst += PP;
+        src += (u32)window->width;
     }
 }
 
-static void clear_mouse_old_area(s32 x, s32 y) {
-    for (s32 dy = 0; dy < 11; dy++) {
-        for (s32 dx = 0; dx < 6; dx++) {
-            s32 px = x + dx;
-            s32 py = y + dy;
 
-            if (px < 0 || py < 0 ||
-                px >= (s32)fb->screen_width ||
-                py >= (s32)fb->screen_height)
-                continue;
+#define CURSOR_WIDTH 6
+#define CURSOR_HEIGHT 11
 
-            u32 *pixel = (u32 *)(second_buffer + py * fb->screen_pitch + px * fb->bpp);
-            *pixel = desktop_background_buffer[py * (fb->screen_pitch / 4) + px];
-        }
+static u32 mouse_save[CURSOR_HEIGHT * CURSOR_WIDTH];
+static s32 ms_x = -1, ms_y = 0, ms_w = 0, ms_h = 0;
+
+static void mouse_snapshot() {
+    s32 cx = (s32)mouse_x;
+    s32 cy = (s32)mouse_y;
+    s32 x0 = cx;
+    s32 y0 = cy;
+    s32 x1 = cx + CURSOR_WIDTH;
+    s32 y1 = cy + CURSOR_HEIGHT;
+
+    if (x0 < 0) x0 = 0;
+    if (y0 < 0) y0 = 0;
+    if (x1 > (s32)SW) x1 = (s32)SW;
+    if (y1 > (s32)SH) y1 = (s32)SH;
+
+    if (x0 >= x1 || y0 >= y1){
+        ms_x = -1;
+        return;
     }
+
+    for (s32 r = 0; r < y1 - y0; r++)
+        cpy32(mouse_save + (u32)r * CURSOR_WIDTH, sb + (u32)(y0 + r) * PP + (u32)x0, (u32)(x1 - x0));
+
+    ms_x = x0;
+    ms_y = y0;
+    ms_w = x1 - x0;
+    ms_h = y1 - y0;
 }
 
-static void draw_mouse() {
-    if (prev_mouse_x >= 0 && prev_mouse_y >= 0)
-        dirty_rect_union(prev_mouse_x, prev_mouse_y, 6, 11);
+static void mouse_restore() {
+    if (ms_x < 0)
+        return;
 
-    for (u32 dy = 0; dy < 11; dy++) {
-        for (u32 dx = 0; dx < 6; dx++) {
-            if (!mouse_now[dy][dx])
-                continue;
-            s32 px = (s32)mouse_x + (s32)dx;
-            s32 py = (s32)mouse_y + (s32)dy;
-            if (px < 0 || py < 0 ||
-                px >= (s32)fb->screen_width || py >= (s32)fb->screen_height)
-                continue;
-            put_pixel((u32)px, (u32)py, 0x00FF0000);
+    for (s32 r = 0; r < ms_h; r++)
+        cpy32(sb + (u32)(ms_y + r) * PP + (u32)ms_x, mouse_save + (u32)r * CURSOR_WIDTH, (u32)ms_w);
+
+    dirty_rect_union(ms_x, ms_y, ms_w, ms_h);
+    ms_x = -1;
+}
+
+static void mouse_render() {
+    s32 cx = (s32)mouse_x;
+    s32 cy = (s32)mouse_y;
+    s32 x0 = cx < 0 ? 0 : cx;
+    s32 y0 = cy < 0 ? 0 : cy;
+    s32 x1 = cx + CURSOR_WIDTH > (s32)SW ? (s32)SW : cx + CURSOR_WIDTH;
+    s32 y1 = cy + CURSOR_HEIGHT > (s32)SH ? (s32)SH : cy + CURSOR_HEIGHT;
+
+    for (s32 r = y0; r < y1; r++) {
+        for (s32 c = x0; c < x1; c++) {
+            u32 gx = (u32)(c - cx);
+            u32 gy = (u32)(r - cy);
+            if (mouse_now[gy][gx]) {
+                sb[(u32)r * PP + (u32)c] = 0xFFFF0000;
+            }
         }
     }
 
-    dirty_rect_union((s32)mouse_x, (s32)mouse_y, 6, 11);
-    prev_mouse_x = (s32)mouse_x;
-    prev_mouse_y = (s32)mouse_y;
+    if (x0 < x1 && y0 < y1)
+        dirty_rect_union(x0, y0, x1 - x0, y1 - y0);
+}
+
+static void mouse_redraw_after_scene() {
+    ms_x = -1;
+    mouse_snapshot();
+    mouse_render();
+}
+
+static void mouse_redraw_moved() {
+    mouse_restore();
+    mouse_snapshot();
+    mouse_render();
 }
 
 static void draw_icons_window(Window *window) {
@@ -621,50 +699,47 @@ static void draw_window_content(Window *window) {
     draw_icons_window(window);
 }
 
-/*
- v oid deskt*op_fill_rect(s32 x, s32 y, s32 width, s32 height, u32 color) {
- for (u32 row = 0; row < height; row++) {
-     for (u32 col = 0; col < width; col++) {
-         u32 px = x + col;
-         u32 py = y + row;
+// void desktop_fill_rect(s32 x, s32 y, s32 width, s32 height, u32 color) {
+//     for (u32 row = 0; row < height; row++) {
+//         for (u32 col = 0; col < width; col++) {
+//             u32 px = x + col;
+//             u32 py = y + row;
 
-         if (px >= 0 && py >= 0)
-             put_pixel(px, py, color);
-         }
-         }
-         }
+//             if (px >= 0 && py >= 0)
+//                 put_pixel(px, py, color);
+//         }
+//     }
+// }
 
-         void desktop_draw_string(const char *text, u32 x, u32 y, u32 color) {
-         while (*text) {
-             u8 code = (u8)*text++;
+// void desktop_draw_string(const char *text, u32 x, u32 y, u32 color) {
+//     while (*text) {
+//         u8 code = (u8)*text++;
 
-             for (u32 row = 0; row < 16; row++) {
-                 u8 bits = font8x16[16 * code + row];
+//         for (u32 row = 0; row < 16; row++) {
+//             u8 bits = font8x16[16 * code + row];
 
-                 for (u32 col = 0; col < 8; col++) {
-                     if (bits & (0x80 >> col))
-                         put_pixel(x + col, y + row, color);
-                     }
-                     }
+//             for (u32 col = 0; col < 8; col++) {
+//                 if (bits & (0x80 >> col))
+//                     put_pixel(x + col, y + row, color);
+//                 }
+//             }
 
-                     x += 8;
-                     }
-                     }
+//             x += 8;
+//     }
+// }
 
-                     static void draw_desktop() {
-                     // for (u32 i = 0; i < desktop_icon_count; i++){
-                     //     DesktopIcon *icon = &desktop_icons[i];
-                     //     printf("before icon draw\n");
-                     //     icon->draw(icon->x, icon->y, icon->size);
-                     //     printf("after icon draw\n");
-                     // }
-                     }
-                     */
+static void draw_desktop() {
+    for (u32 i = 0; i < desktop_icon_count; i++){
+        DesktopIcon *icon = &desktop_icons[i];
+        printf("before icon draw\n");
+        icon->draw(icon->x, icon->y, icon->size);
+        printf("after icon draw\n");
+    }
+}
 
 static void wm_render(void) {
     if (!active_window || !active_window->full_screen){
         clearframe();
-        dirty_rect_union(0, 0, fb->screen_width, fb->screen_height);
     }
 
     for (u32 i = 0; i < window_count; i++){
@@ -675,9 +750,6 @@ static void wm_render(void) {
         present_window(window);
         draw_border_window(window, 0x00FFFFFF);
     }
-
-    draw_mouse();
-    present_framebuffer();
 }
 
 static void compositor_present() {
@@ -737,8 +809,7 @@ static void window_resize(Window *window, s32 new_width, s32 new_height) {
     if (!new_buffer)
         return;
 
-    for (u32 i = 0; i < nw * nh; i++)
-        new_buffer[i] = 0xFF000000;
+    set32(new_buffer, 0xFF000000, nw * nh);
 
     u32 copy_w = nw < (u32)window->width ? nw : (u32)window->width;
     u32 copy_h = nh < (u32)window->height ? nh : (u32)window->height;
@@ -753,6 +824,8 @@ static void window_resize(Window *window, s32 new_width, s32 new_height) {
     window->buffer_size = nw * nh;
     window->width = (s32)nw;
     window->height = (s32)nh;
+
+    dirty_rect_union(window->x, window->y, window->width, window->height);
 
     if (window->on_resize)
         window->on_resize(window, old_w, old_h);
@@ -782,6 +855,9 @@ static void window_switch_next()
     active_window = z_order[index];
 
     window_raise(active_window);
+
+    if (active_window)
+        dirty_rect_union(active_window->x, active_window->y, active_window->width, active_window->height);
 
     changed = true;
 }
@@ -853,9 +929,9 @@ static void window_full_screen(Window *window, bool full_screen) {
 
         dirty_rect_union(window->prev_x, window->prev_y, window->prev_width, window->prev_height);
 
-        window_resize(window, fb->screen_width, fb->screen_height);
+        window_resize(window, SW, SH);
 
-        dirty_rect_union(0, 0, fb->screen_width, fb->screen_height);
+        dirty_rect_union(0, 0, SW, SH);
     } else {
         dirty_rect_union(window->x, window->y, window->width, window->height);
         window->full_screen = false;
@@ -863,6 +939,7 @@ static void window_full_screen(Window *window, bool full_screen) {
         window->y = window->prev_y;
 
         window_resize(window, window->prev_width,  window->prev_height);
+        dirty_rect_union(window->x, window->y, window->width, window->height);
     }
     changed = true;
 }
@@ -931,7 +1008,12 @@ static void init_WM() {
 
     fb = fbcon_stop();
 
-    second_buffer_size = fb->screen_height * fb->screen_pitch;
+    SW = fb->screen_width;
+    SH = fb->screen_height;
+    PP = fb->screen_pitch / 4;
+    vram = (u32 *)fb->fb_addr;
+
+    second_buffer_size = SH * fb->screen_pitch;
     second_buffer = alloc(second_buffer_size);
 
     if (!second_buffer)
@@ -939,6 +1021,7 @@ static void init_WM() {
 
     memset(second_buffer, 0, second_buffer_size);
 
+    sb = (u32*)second_buffer;
     desktop_background_buffer = 0;
     memset(windows, 0, sizeof(windows));
     window_count = 0; active_window = 0;
@@ -946,10 +1029,10 @@ static void init_WM() {
     changed = false;
 
     build_desktop_background();
-    clearframe();
-
-    dirty_rect_union(0, 0, fb->screen_width, fb->screen_height);
     wm_render();
+    dirty_rect_union(0,0,SW,SH);
+    mouse_redraw_after_scene();
+    present_framebuffer();
 
     s32 old_mouse_x = get_mouse_x();
     s32 old_mouse_y = get_mouse_y();
@@ -962,6 +1045,7 @@ static void init_WM() {
     s32 old_width = 0, old_height = 0;
     s32 resize_start_x = 0, resize_start_y = 0;
     s32 old_x = 0, old_y = 0;
+    s32 last_frame = 0;
 
     bool dragging = false;
     bool size_changed = false;
@@ -1030,9 +1114,9 @@ static void init_WM() {
 
                     if ((drag_offsets_x - Collapse) * (drag_offsets_x - Collapse) + (drag_offsets_y - 10) * (drag_offsets_y - 10) <= 49) {
                         active_window->invisible = 1;
-                        changed = true;
                         tittle_button_clicked = true;
-                        dirty_rect_union(0, 0, fb->screen_width, fb->screen_height);
+                        dirty_rect_union(0, 0, SW, SH);
+                        changed = true;
                     }
                     if ((drag_offsets_x - full_screen) * (drag_offsets_x - full_screen) + (drag_offsets_y - 10) * (drag_offsets_y - 10) <= 49) {
                         hit->full_screen = !hit->full_screen;
@@ -1077,18 +1161,20 @@ static void init_WM() {
                 s32 old_rect_w = active_window->width;
                 s32 old_rect_h = active_window->height;
 
-                new_x = clamp(new_x, 0, (s32)fb->screen_width - active_window->width);
-                new_y = clamp(new_y, 0, (s32)fb->screen_height - active_window->height);
+                new_x = clamp(new_x, 0, (s32)SW - active_window->width);
+                new_y = clamp(new_y, 0, (s32)SH - active_window->height);
 
                 if (active_window->x != new_x || active_window->y != new_y) {
                     dirty_rect_union(old_rect_x, old_rect_y, old_rect_w, old_rect_h);
                     active_window->x = new_x;
                     active_window->y = new_y;
                     dirty_rect_union(active_window->x, active_window->y, active_window->width, active_window->height);
+                    changed = true;
                 }
             }
 
             if (size_changed && !active_window->window_on_changed) {
+                dirty_rect_union(active_window->x, active_window->y, active_window->width, active_window->height);
                 s32 dx = mouse_x - resize_start_x;
                 s32 dy = mouse_y - resize_start_y;
                 s32 x = resize_start_x;
@@ -1146,13 +1232,24 @@ static void init_WM() {
         }
 
         bool mouse_changed = mouse_x != old_mouse_x || mouse_y != old_mouse_y;
+        u32 now = getticks();
 
-        if (changed || mouse_changed) {
-            wm_render();
+        if ((changed || mouse_changed) && now != last_frame) {
+            if (changed) {
+                dirty_rect_union(ms_x, ms_y, ms_w, ms_h);
+                wm_render();
+                mouse_redraw_after_scene();
+                changed = false;
+            } else {
+                mouse_redraw_moved();
+            }
 
+            present_framebuffer();
             old_mouse_x = mouse_x;
             old_mouse_y = mouse_y;
-            changed = false;
+            prev_mouse_x = (s32)mouse_x;
+            prev_mouse_y = (s32)mouse_y;
+            last_frame = now;
         }
 
         old_left = left;
@@ -1198,5 +1295,3 @@ INIT void init(void* _resolve_function(char* name))
 
     create_task("Windows_Manager", init_WM);
 }
-
-//_kill;i:

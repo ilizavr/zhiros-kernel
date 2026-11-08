@@ -9,6 +9,7 @@ SECTIONS {
 		*(.text)
 		*(.rodata)
 	}
+	_kernel_endtext = .;
 	.data : { *(.data) }
 	.bss : { *(.bss) }
 	_kernel_end = .;

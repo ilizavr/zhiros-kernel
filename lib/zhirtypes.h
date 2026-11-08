@@ -29,7 +29,8 @@ typedef unsigned int i_ptr;
 #define O0 __attribute__((optimize("O0")))
 #define PAK __attribute__((packed))
 #define API
-#define INIT __attribute__((section(".text.init")))
+//#define INIT __attribute__((section(".text.init")))  // переделана система линковки модулей
+#define INIT
 
 #define CALL(addr,...) ((void(*)(...))addr)(__VA_ARGS__)
 #define HLT() asm volatile("hlt") //deprecated, use _yield
@@ -68,17 +69,26 @@ printf("\n");\
 #define _1M (1<<20)
 #define _1G (1<<30)
 
-PAK struct object
+struct object
 {
     u32 type;
     u32 len;
     void* data;
 };
 
-PAK struct objectArray
+struct objectArray
 {
     u32 count;
     struct object objs[0];
+};
+
+struct memoryblock
+{
+    u32 size;
+    u32 allocated;
+
+    struct memoryblock *prev;
+    struct memoryblock *next;
 };
 
 struct function_info
@@ -93,6 +103,22 @@ struct module_info
     char *path;
     void *start;
     u32 size;
+};
+
+struct module_header
+{
+    u8 jmp[5];
+    u8 signature[4];
+    u32 version;
+    u32 text_end;
+    u32 end;
+};
+
+struct mount{
+    struct disk* dsk;
+    struct file* (*open)(struct disk* disk, char *path);
+    struct file* (*mkdir)(struct disk* disk, char *path);
+    struct file* (*create_file)(struct disk *disk, char *path);
 };
 
 struct fb_info

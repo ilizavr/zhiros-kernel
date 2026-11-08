@@ -32,9 +32,7 @@ static void drawimage(struct image*img,int startx,int starty, int font_scale)
 {
     for(int x = 0;x<img->width;x++)
         for(int y = 0;y<img->height;y++)
-            //for(int dx = 0;dx< font_scale;dx++)
-                //for(int dy = 0;dy< font_scale;dy++)
-                    put_pixel(x+startx,y+starty,img->bytes[y*img->width+x]);
+            put_pixel(x+startx,y+starty,img->bytes[y*img->width+x]);
 }
 
 static void cpuid(u32 code, u32*a, u32*b, u32*c, u32*d)
@@ -189,8 +187,14 @@ static struct object * cls(struct objectArray* args)
 static struct object * lsmod(struct objectArray* args)
 {
     struct module_info * mdls = get_module_array();
-    printf("ID   LOCATION        NAME\n");
-    for(int i = 0; i< 256;i++) if(mdls[i].start) printf("%u    %x-%x   %C%s%C\n",i, mdls[i].start,mdls[i].start+mdls[i].size,0xFFA500,mdls[i].path,0xAAAAAA);
+    printf("ID   LOCATION        CHECKSUM  NAME\n");
+    for(int i = 0; i< 256;i++){
+        if(!mdls[i].start) continue;
+        struct module_info module = mdls[i];
+        struct module_header* mh = (struct module_header*)module.start;
+
+        printf("%u    %x-%x   %C%x     %C%s%C\n",i, module.start,module.start+module.size,0x00FF00,crc16((u8*)module.start,mh->text_end),0xFFA500,module.path,0xAAAAAA);
+    }
 
     return 0;
 }
@@ -309,7 +313,6 @@ static void writefile(char diskletter, char* name) {
         curptr++;
     }
 
-    //printf("\n\nu write:\n%s", buffer);
     ff->write(ff, buffer, strlen(buffer),0);
 
 
@@ -417,7 +420,7 @@ INIT void init(void* (*_resolve_function)(char* name))
 
     struct file* pyelf = open('A',"./py.elf");
     if(pyelf) {
-        register_function("_py",py,"_py;c:diskletter;name");
+        register_function("_py",py,"_py(char disk_letter, char* name) -> None");
         pyelf->close(pyelf);
     }
 

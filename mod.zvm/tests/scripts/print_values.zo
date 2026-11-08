@@ -1,0 +1,6 @@
+print(1)
+println("")
+print("value=")
+println(42)
+print(3, 4.5, "ok")
+println("")

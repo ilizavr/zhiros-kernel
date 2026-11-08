@@ -7,6 +7,7 @@
 #include "interrupt.h"
 #include "../lib/ports.h"
 #include "panic.h"
+#include "printf.h"
 
 void pic_remap()
 {
@@ -74,6 +75,8 @@ extern struct
 
 void interrupt_handler(u32 num)
 {
+	if(num == 33 && inb(0x60) == 0xE0) {pic_eoi(num-0x20); return;} //TODO убрать ебучий костыль
+
 	for(int i = 0;i<16;i++)
 		if(_interrupt_array[num].hooks[i])
 			CALL(_interrupt_array[num].hooks[i]);

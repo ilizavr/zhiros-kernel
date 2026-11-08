@@ -11,13 +11,6 @@
 
 char current_letter_disk = 'A';
 
-struct mount{
-    struct disk* dsk;
-    struct file* (*open)(struct disk* disk, char *path);
-    struct file* (*mkdir)(struct disk* disk, char *path);
-    struct file* (*create_file)(struct disk *disk, char *path);
-};
-
 struct mount mounts[26];
 
 char mount(struct disk* dsk, void * open_fnc, void * mkdir_fnc, void * create_file_fnc)
@@ -65,26 +58,5 @@ struct file* create_file(char disk_letter,char *path)
     if(!mounts[disk_letter-'A'].create_file) return 0;
     return mounts[disk_letter-'A'].create_file(mounts[disk_letter-'A'].dsk,path);
 }
-/*
-u32 read_stub(struct file* file, void* buffer, u32 size, u32 offset)
-{
-    file->dsk->lba_read(file->dsk,offset/512,buffer,size/512);
-}
-u32 getsize_stub(struct file* file)
-{
-    return file->dsk->size*512;
-}
-struct file* open_stub(struct disk* dsk,char *path)
-{
-    struct file* nf = kalloc(sizeof(struct file));
-    nf->dsk = dsk;
-    nf->read = read_stub;
-    nf->getsize = getsize_stub;
-    nf->write = 0;
-    nf->close = 0;
-    nf->is_dir = false;
 
-    return nf;
-}
-*/
 #include "unstar.h"

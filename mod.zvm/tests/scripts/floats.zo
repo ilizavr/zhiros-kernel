@@ -1,0 +1,14 @@
+var fp x = 1.5
+var fp y = 2.0
+var fp z = x + y * 2.0
+
+println("%f", z)
+println("%u", z > 5.0)
+println("%u", int(z))
+println("%f", float(3))
+
+if (x < y) {
+    println("float-cmp")
+}
+
+println("%f", -x)

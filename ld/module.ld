@@ -9,6 +9,7 @@ SECTIONS
         *(.text*)
     }
 
+    _text_end = .;
     .rodata : {
         *(.rodata*)
     }

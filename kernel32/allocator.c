@@ -15,18 +15,14 @@ extern char _kernel_start[];
 #define alignment(size) (((size) + 15) & ~15)
 #define alignment_(size) ((size) & ~15)
 
-PAK struct memoryblock
-{
-    u32 size;
-    u32 allocated;
-
-    struct memoryblock *prev;
-    struct memoryblock *next;
-};
-
 struct memoryblock headblock = {0,1,0,0};
 struct memoryblock *footblock = &headblock;
 i_ptr available_memory = 0;
+
+struct memoryblock * get_first_block()
+{
+    return headblock.next;
+}
 
 void *kalloc(u32 size)
 {
@@ -55,8 +51,6 @@ void *kalloc(u32 size)
         }
         current = current->next;
     }
-
-    //kernel_panic_text("memory not found");
 
     restore_irq(eflags);
     return 0;
@@ -175,19 +169,19 @@ i_ptr get_used_memory()
     return memory-get_available_memory();
 }
 
-void debug_heap()
-{
-    i_ptr available_memory = 0;
-    u32 eflags = save_irq();
-    struct memoryblock *current = headblock.next;
-
-    for(int i = 0;current;i++)
-    {
-        printf("%u. free block %x-%x(size %u)\n",i,current,(i_ptr)current+current->size,current->size);
-        available_memory += current->size;
-        current = current->next;
-    }
-
-    restore_irq(eflags);
-    printf("free memory:%u. used memory:%u\n",available_memory,memory-available_memory);
-}
+// void debug_heap()
+// {
+//     i_ptr available_memory = 0;
+//     u32 eflags = save_irq();
+//     struct memoryblock *current = headblock.next;
+//
+//     for(int i = 0;current;i++)
+//     {
+//         printf("%u. free block %x-%x(size %u)\n",i,current,(i_ptr)current+current->size,current->size);
+//         available_memory += current->size;
+//         current = current->next;
+//     }
+//
+//     restore_irq(eflags);
+//     printf("free memory:%u. used memory:%u\n",available_memory,memory-available_memory);
+// }

@@ -1,0 +1,35 @@
+// Integer operators and precedence.
+var u32 a = 2 + 3 * 4
+var u32 b = (2 + 3) * 4
+var u32 c = 17 % 5
+var u32 d = 1 << 4
+var u32 e = 32 >> 2
+var u32 f = 6 & 3
+var u32 g = 6 | 3
+var u32 h = 6 ^ 3
+var u32 i = ~0
+
+println("%u", a)
+println("%u", b)
+println("%u", c)
+println("%u", d)
+println("%u", e)
+println("%u", f)
+println("%u", g)
+println("%u", h)
+println("%u", i)
+
+/* Comparisons and logical operators. */
+var u32 lt = 1 < 2
+var u32 eq = 2 == 2
+var u32 ne = 2 != 3
+var u32 lo = 0 || 5
+var u32 la = 1 && 7
+var u32 no = !0
+
+println("%u", lt)
+println("%u", eq)
+println("%u", ne)
+println("%u", lo)
+println("%u", la)
+println("%u", no)

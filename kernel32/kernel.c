@@ -21,6 +21,7 @@ char ramdisk_letter;
 
 extern char _kernel_end[];
 extern char _kernel_start[];
+extern char _kernel_endtext[];
 
 void init()
 {
@@ -41,6 +42,10 @@ void init_sse() {
     asm volatile("mov %0, %%cr0" : : "r"(cr0));
 }
 
+u16 checksum(i_ptr start, i_ptr end)
+{
+    return crc16((u8*)start, end-start);
+}
 
 void main(i_ptr addr, u32 magic)
 {
@@ -80,7 +85,11 @@ void main(i_ptr addr, u32 magic)
 
     init_fbcon(fb_tag->framebuffer_addr, fb_tag->framebuffer_width, fb_tag->framebuffer_height, fb_tag->framebuffer_pitch, fb_tag->framebuffer_bpp);
     LOGI("fbcon inited");
-    LOGI("bootloader name: %s",bootloader_name->string);
+    if(bootloader_name)
+    {
+        LOGI("bootloader name: %s",bootloader_name->string);
+    }
+    LOGI("kernel checksum %C%x%C", 0x00FF00,checksum((i_ptr)_kernel_start,(i_ptr)_kernel_endtext),0xAAAAAA);
 
     if(!module_tag)
     {
@@ -135,6 +144,7 @@ void main(i_ptr addr, u32 magic)
     register_function("_free",free,"_free(void* buf) -> bool success");
     register_function("_getfree",get_available_memory,"_getfree() -> i_ptr freemem");
     register_function("_getused",get_used_memory,"_getused() -> i_ptr usedmem");
+    register_function("_get_first_block",get_first_block,"_get_first_block() -> struct memoryblock*");
     register_function("_hook_interrupt",hook_interrupt,"_hook_interrupt(u32 n, void* function) -> bool success");
     register_function("_diskadd",diskadd,"_diskadd(struct disk* dsk) -> bool success");
     register_function("_getdisk",getdisk,"_getdisk(int idx) -> struct disk*");
@@ -156,8 +166,7 @@ void main(i_ptr addr, u32 magic)
     register_function("_get_tasks",get_tasks,"_get_tasks() -> struct task*");
     register_function("_kill",kill,"_kill(u32 tid) -> bool success");
     register_function("_exec_line",exec_line,"_exec_line(char* command)");
-
-    register_function("map",debug_heap,"");
+    //register_function("map",debug_heap,"");
 
     LOGI("kernel api registred");
 

@@ -1,0 +1,16 @@
+var str a = "Zhir"
+var str b = "VM"
+var str c = a + " " + b
+
+println("%s", c)
+println("%u", len(c))
+println("%s", type(c))
+println("%s", chr(65))
+println("%u", ord("A"))
+
+if (a == "Zhir") {
+    println("string-eq")
+}
+if (a != b) {
+    println("string-ne")
+}

@@ -4,6 +4,7 @@
  */
 
 #include "../lib/zhirapi.h"
+#include "../lib/ports.h"
 #include "WM_types.h"
 
 Window* (*window_create)(char *name);
@@ -58,7 +59,7 @@ void roll_screen()
 
 static void putchar_color_hook(char chr, u32 color)
 {
-    if(!terminal_window || !window_is_active(terminal_window)) return;
+    if(!terminal_window) return;
 
     if(chr=='\n') {
         putchar_color_hook(' ',color);
@@ -92,7 +93,45 @@ static void putchar_color_hook(char chr, u32 color)
     curx+=8;
 }
 
+#define KB_BUF_SIZE 64
+#define KB_BUF_MASK 63
 
+static char kb_buffer[KB_BUF_SIZE];
+static u32 kb_head = 0, kb_tail = 0;
+
+bool shift_pressed = false;
+bool right_shift_pressed = false;
+
+
+static void keyboard_isr_handler()
+{
+    u8 key = inb(0x60);
+    if(key==0x2A)shift_pressed=true;
+    if(key==0xAA)shift_pressed=false;
+    if(key==0x36)right_shift_pressed=true;
+    if(key==0xB6)right_shift_pressed=false;
+
+    if((key&0x80) == 0 && window_is_active(terminal_window))
+    {
+        if(!keyboard_map[key&0x7F]) return;
+
+        u32 kb_head_next = (kb_head+1)&KB_BUF_MASK;//защита от переполнения кольцевого буфера
+        if(kb_head_next == kb_tail) return;
+
+        if(shift_pressed||right_shift_pressed)kb_buffer[kb_head] = keyboard_map_shift[key&0x7F];
+        else kb_buffer[kb_head] = keyboard_map[key&0x7F];
+        kb_head = kb_head_next;
+    }
+}
+
+
+static char getchar_hook()
+{
+    while(kb_head == kb_tail) yield();
+    char c = kb_buffer[kb_tail];
+    kb_tail = (kb_tail+1)&KB_BUF_MASK;
+    return c;
+}
 
 static struct fb_info* getfb_hook()
 {
@@ -126,7 +165,10 @@ static void terminal_thread() {
     fb_secondline_addr = fb_addr+fb_onelinesize;
     clearframe_hook();
 
+    replace_function("_putchar_color",putchar_color_hook);
+    replace_function("_clearframe",clearframe_hook);
     replace_function("_getfb",getfb_hook);
+    replace_function("_getchar",getchar_hook);
 
     while(1) {
         screen_height = terminal_window->height;
@@ -157,8 +199,6 @@ INIT void init(void* _resolve_function(char* name))
     desktop_fill_rect = _resolve_function("_desktop_fill_rect");
     desktop_draw_string = _resolve_function("_desktop_draw_string");
 
-    terminal_task = create_task("terminal", terminal_thread); //создание потока
-
-    replace_function("_putchar_color",putchar_color_hook);
-    replace_function("_clearframe",clearframe_hook);
+    terminal_task = create_task("terminal", terminal_thread);
+    hook_interrupt(33, keyboard_isr_handler);
 }

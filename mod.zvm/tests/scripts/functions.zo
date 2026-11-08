@@ -1,0 +1,28 @@
+// Regression test: "return" must be recognised after a function definition.
+// Before the fix the parser silently stopped at this udf, so no builtin call
+// below it was ever reached.
+udf add(a, b) {
+return a + b
+}
+
+udf fact(n) {
+if (n <= 1) {
+return 1
+}
+return n * fact(n - 1)
+}
+
+udp greet(name) {
+println("hello %s", name)
+}
+
+println("%u", add(2, 3))
+println("%u", fact(5))
+greet("zhir")
+print("after functions\n")
+
+// Short "ret" spelling still works.
+udf sub(a, b) {
+ret a - b
+}
+println("%u", sub(9, 4))

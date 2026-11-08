@@ -503,7 +503,7 @@ static void api_desk_str(const char *s, u32 x, u32 y, u32 c) {
 /* ---------- apps ---------- */
 
 static const char *app_label(int a) {
-    switch (a) { case 0: return "Terminal"; case 1: return "Pong Game"; default: return "Doom"; }
+    switch (a) { case 0: return "Terminal"; case 1: return "Pong Game"; default: return "doom"; }
 }
 static const char *app_wname(int a) {
     switch (a) { case 0: return "terminal"; case 1: return "Pong Game"; default: return "doom"; }
@@ -644,7 +644,7 @@ static const char *menu_item(int m, int i, int *kind) {
             case 1: *kind = 1; return "";
             case 2: return "Terminal";
             case 3: return "Pong";
-            case 4: return "Images";
+            case 4: return "Doom";
             case 5: *kind = 1; return "";
             case 6: return "Restart";
             default: return 0;

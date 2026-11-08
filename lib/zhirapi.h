@@ -3,49 +3,50 @@
 
 #include "zhirtypes.h"
 
-static void (*print_color)(char *string, u32 color);
-static void (*printf)(...);
-static void (*putchar_color)(char chr, u32 color);
-static void (*clearframe)();
-static struct fb_info* (*fbcon_stop)();
-static struct fb_info* (*getfb)();
-static void (*set_font_scale)(u32 scale);
+void (*print_color)(char *string, u32 color);
+void (*printf)(...);
+void (*putchar_color)(char chr, u32 color);
+void (*clearframe)();
+struct fb_info* (*fbcon_stop)();
+struct fb_info* (*getfb)();
+void (*set_font_scale)(u32 scale);
 
-static bool* (*get_key_state_matrix)();
-static int (*gets)(char* string, int max_size);
-static char (*getchar)();
+bool* (*get_key_state_matrix)();
+int (*gets)(char* string, int max_size);
+char (*getchar)();
 
-static void* (*alloc)(u32 size);
-static bool (*free)(void* buf);
-static i_ptr (*getfree)();
-static i_ptr (*getused)();
+void* (*alloc)(u32 size);
+bool (*free)(void* buf);
+i_ptr (*getfree)();
+i_ptr (*getused)();
+struct memoryblock* (*get_first_block)();
 
-static struct function_info* (*get_linker_head)();
-static struct module_info* (*get_module_array)();
-static void* (*resolve_function)(char* name);
-static void (*register_function)(char *function_name, void* call, char *description);
-static bool (*replace_function)(char *function_name, void* newfnc);
-static bool (*hook_interrupt)(u32 n, void* function);
-static bool (*load_mod)(char diskletter, char* path);
-static bool (*unload_mod)(u32 idx);
+struct function_info* (*get_linker_head)();
+struct module_info* (*get_module_array)();
+void* (*resolve_function)(char* name);
+void (*register_function)(char *function_name, void* call, char *description);
+bool (*replace_function)(char *function_name, void* newfnc);
+bool (*hook_interrupt)(u32 n, void* function);
+bool (*load_mod)(char diskletter, char* path);
+bool (*unload_mod)(u32 idx);
 
-static void (*sleep_ms)(u32 ms);
-static u32 (*getticks)();
+void (*sleep_ms)(u32 ms);
+u32 (*getticks)();
 
-static bool (*diskadd)(struct disk* dsk);
-static struct disk* (*getdisk)(int idx);
+bool (*diskadd)(struct disk* dsk);
+struct disk* (*getdisk)(int idx);
 
-static bool (*mount)(struct disk* dsk, void * open_fnc, void* mkdir_function, void* create_file_function);
-static struct file* (*open)(char diskletter, char* path);
-static struct file* (*create_file)(char diskletter, char* path);
-static struct file* (*mkdir)(char diskletter, char* path);
+bool (*mount)(struct disk* dsk, void * open_fnc, void* mkdir_function, void* create_file_function);
+struct file* (*open)(char diskletter, char* path);
+struct file* (*create_file)(char diskletter, char* path);
+struct file* (*mkdir)(char diskletter, char* path);
 
-static void (*yield)();
-static struct task* (*get_tasks)();
-static struct task* (*create_task)(char * name, void* function);
-static void (*kill)(u32 tid);
+void (*yield)();
+struct task* (*get_tasks)();
+struct task* (*create_task)(char * name, void* function);
+void (*kill)(u32 tid);
 
-static void (*exec_line)(char* cmd);
+void (*exec_line)(char* cmd);
 
 static inline void api_init(void* (*_resolve_function)(char* name)) {
     if (!_resolve_function) return;
@@ -68,6 +69,7 @@ static inline void api_init(void* (*_resolve_function)(char* name)) {
     free = _resolve_function("_free");
     getfree = _resolve_function("_getfree");
     getused = _resolve_function("_getused");
+    get_first_block = _resolve_function("_get_first_block");
 
     get_linker_head = _resolve_function("_get_linker_head");
     get_module_array = _resolve_function("_get_module_array");
