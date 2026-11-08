@@ -3,11 +3,10 @@
  * SPDX-License-Identifier: MIT
  */
 
-void (*printf)(...);
+#include "../lib/zhirapi.h"
 
-void _start(void* (*_resolve_function)(char* name))
+void _start(void* resolve)
 {
-    printf = _resolve_function("_printf");
-
+    api_init(resolve);
     printf("hello world!\n");
 }
