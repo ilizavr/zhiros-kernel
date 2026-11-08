@@ -26,27 +26,33 @@
 модули являются доверенным кодом, как и в линукс. они имеют неограниченый доступ к системе. для недоверенного кода используется zhir-vm или unixbox
 
 ## компоненты ядра:
-1. модуль взаимодействия с multiboot2 загрузчиком
+1. компонент взаимодействия с multiboot2 загрузчиком
 2. текстовый видеодрайвер fbcon, который можно отключить через _fbcon_stop и реализовать свой драйвер
 3. драйвер ps/2 клавиатуры
 4. абстракции диска, разделов и vfs
 5. минималистичная ФС ustar
 6. динамический линковщик модулей
-7. обработчик CPU exception. вывод паники с регистрами, стеком и консолью(частично готово)
+7. обработчик CPU exception. вывод kernel panic
 8. консоль отладки
 9. планировщик
 
 ## набор модулей:
 - clitools - готов и интегрирован в этот репозиторий
-- mouse-driver(NEUROSLOP) - готов и интегрирован в этот репозиторий
+- mouse-driver - готов и интегрирован в этот репозиторий
 - bios disk driver - готов и интегрирован в этот репозиторий
 - mbr - готов и интегрирован в этот репозиторий
 - tmpfs - готов и интегрирован в этот репозиторий
 - network - готов - https://github.com/ukdaemonz/zhiros-kernel
-- windowmanager+zhirGL - готов - https://github.com/TINERKOTL/zhiros-module-example
+- windowmanager+zhirGL+zhirte - готов - https://github.com/TINERKOTL/zhiros-module-example
 - zhir-vm(jit vm для memorysafe языка) - готов - https://github.com/bust6k/ZhirVM
 - fat16 - скоро
 - unixbox(слой совместимости для unix-подобных программ) - в планах
+
+## набор модулей нейрослоп:
+- macwm - оконный менеджер в стиле макос(claude code opus 5.5)
+- zhirte_ns - улучшенный редактор кода(glm 5.3 flash)
+- doom port(claude code opus 5.5)
+- cli_NS - история команд в терминале
 
 ## нейросети и вайбкодинг
 - в ядре не должно быть ни строчки кода написанного ИИ.
@@ -54,8 +60,12 @@
 - в первое время модули пишем с помощью нейросетей, как технический долг. в будущем все основные модули будут без нейросетевого кода
 - написание тестов и review кода с помощью нейросетей РАЗРЕШЕНО
 
-## screenshot
-<img width="1197" height="900" alt="изображение" src="https://github.com/user-attachments/assets/be74022f-6286-475c-87e8-b1103b0c493e" />
-<img width="1200" height="901" alt="изображение" src="https://github.com/user-attachments/assets/ce0b5e3f-428e-4d4e-8bf1-7a84cbf4fb97" />
+## screenshotы без нейрослопа
+<img width="827" height="354" alt="изображение" src="https://github.com/user-attachments/assets/ca0ed1a9-ed53-4710-bfc9-f7ae495c750e" />
+<img width="1196" height="893" alt="изображение" src="https://github.com/user-attachments/assets/51ffa2a4-c8db-44c4-b37f-0022ba50dc16" />
+<img width="1203" height="890" alt="изображение" src="https://github.com/user-attachments/assets/42948e00-4651-470e-b5c1-04123fd61106" />
+<img width="1190" height="896" alt="изображение" src="https://github.com/user-attachments/assets/4431c754-628c-413f-bc3a-c005f7daaa8c" />
+<img width="1196" height="898" alt="изображение" src="https://github.com/user-attachments/assets/5cc7b05b-8be2-4b32-af93-5a10f3b1d2a1" />
 
-
+## с нейрослопом
+<img width="1197" height="893" alt="изображение" src="https://github.com/user-attachments/assets/2ec00d0d-3245-476b-b280-0550e30d9a8f" />
