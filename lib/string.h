@@ -31,9 +31,14 @@ static char *strstr(const char *haystack, const char *needle) {
 
     return NULL;
 }
-static void *memset(void *s, int c, size_t n) {
+static void *memset(void *s, u8 c, size_t n) {
     unsigned char *p = s;
-    while (n--) *p++ = (unsigned char)c;
+    while (n--) *p++ = c;
+    return s;
+}
+static void *memset_u32(void *s, u32 c, size_t n) {
+    u32 *p = s;
+    while (n--) *p++ = c;
     return s;
 }
 

@@ -10,6 +10,7 @@ typedef void (*DesktopIconDraw)(u32 x, u32 y, u32 size);
 struct Window{
     s32 x,y;
     bool window_on_changed;
+    bool can_close;
 
     s32 width, height;
     bool invisible;

@@ -47,6 +47,12 @@ u16 checksum(i_ptr start, i_ptr end)
     return crc16((u8*)start, end-start);
 }
 
+u16 kernelchecksum = 0;
+u16 get_kernel_checksum()
+{
+    return kernelchecksum;
+}
+
 void main(i_ptr addr, u32 magic)
 {
     if(magic != MULTIBOOT2_BOOTLOADER_MAGIC) return;
@@ -89,7 +95,7 @@ void main(i_ptr addr, u32 magic)
     {
         LOGI("bootloader name: %s",bootloader_name->string);
     }
-    LOGI("kernel checksum %C%x%C", 0x00FF00,checksum((i_ptr)_kernel_start,(i_ptr)_kernel_endtext),0xAAAAAA);
+    LOGI("kernel checksum %C%x%C", 0x00FF00,kernelchecksum=checksum((i_ptr)_kernel_start,(i_ptr)_kernel_endtext),0xAAAAAA);
 
     if(!module_tag)
     {
@@ -165,7 +171,8 @@ void main(i_ptr addr, u32 magic)
     register_function("_yield",yield,"_yield() -> None");
     register_function("_get_tasks",get_tasks,"_get_tasks() -> struct task*");
     register_function("_kill",kill,"_kill(u32 tid) -> bool success");
-    register_function("_exec_line",exec_line,"_exec_line(char* command)");
+    register_function("_exec_line",exec_line,"_exec_line(char* command) -> None");
+    register_function("_get_kernel_checksum",get_kernel_checksum,"_get_kernel_checksum() -> u16 crc16");
     //register_function("map",debug_heap,"");
 
     LOGI("kernel api registred");

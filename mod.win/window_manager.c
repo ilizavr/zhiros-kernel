@@ -152,11 +152,11 @@ static u32 desktop_pattern_color(u32 x, u32 y) {
 
 u32 *desktop_background_buffer = 0;
 
-static void build_desktop_background() {
+static bool build_desktop_background() {
     if (!desktop_background_buffer) {
         desktop_background_buffer = alloc(second_buffer_size);
         if (!desktop_background_buffer)
-            return;
+            return 0;
     }
 
     const u32 grid = 24;
@@ -178,6 +178,8 @@ static void build_desktop_background() {
             set32(row + x, line, n);
         }
     }
+
+    return 1;
 }
 
 static u32 arrow_cursor[11][6] = {
@@ -304,6 +306,7 @@ static Window *window_create(char *name) {
     window->full_screen = false;
 
     window->buffer_size = window->width*window->height;
+    window->can_close = true;
 
     window->buffer = alloc(window->buffer_size * sizeof(u32));
     if(!window->buffer)
@@ -398,8 +401,6 @@ static void present_framebuffer() {
     }
 
     dirty.valid = false;
-
-    // fps_on_present();
 }
 
 static void clearframe_win(Window *window, u32 color) {
@@ -410,7 +411,10 @@ static void clearframe_win(Window *window, u32 color) {
 }
 
 static void clearframe() {
-    cpy32(sb, desktop_background_buffer, SH*PP);
+    if (desktop_background_buffer)
+        cpy32(sb, desktop_background_buffer, SH*PP);
+    else
+        memset(sb, 0, SH*PP);
 }
 
 static void put_pixel(u32 x, u32 y, u32 color) {
@@ -711,22 +715,22 @@ static void draw_window_content(Window *window) {
 //     }
 // }
 
-// void desktop_draw_string(const char *text, u32 x, u32 y, u32 color) {
-//     while (*text) {
-//         u8 code = (u8)*text++;
+void desktop_draw_string(const char *text, u32 x, u32 y, u32 color) {
+    while (*text) {
+        u8 code = (u8)*text++;
 
-//         for (u32 row = 0; row < 16; row++) {
-//             u8 bits = font8x16[16 * code + row];
+        for (u32 row = 0; row < 16; row++) {
+            u8 bits = font8x16[16 * code + row];
 
-//             for (u32 col = 0; col < 8; col++) {
-//                 if (bits & (0x80 >> col))
-//                     put_pixel(x + col, y + row, color);
-//                 }
-//             }
+            for (u32 col = 0; col < 8; col++) {
+                if (bits & (0x80 >> col))
+                    put_pixel(x + col, y + row, color);
+            }
+        }
 
-//             x += 8;
-//     }
-// }
+        x += 8;
+    }
+}
 
 static void draw_desktop() {
     for (u32 i = 0; i < desktop_icon_count; i++){
@@ -779,7 +783,7 @@ static void window_raise(Window *window) {
 }
 
 static void window_resize(Window *window, s32 new_width, s32 new_height) {
-    if (!window)
+    if (!window || new_width <= 0 || new_height <= 0)
         return;
 
     s32 old_x = window->x;
@@ -789,9 +793,6 @@ static void window_resize(Window *window, s32 new_width, s32 new_height) {
 
     u32 nw = (u32)new_width;
     u32 nh = (u32)new_height;
-
-    if (nw == 0 || nh == 0)
-        return;
 
     if (!window->full_screen) {
         if (nw > MAX_WINDOW_WIDTH)
@@ -886,11 +887,11 @@ static void resize_active_window(s32 dw, s32 dh)
     changed = true;
 }
 
-static void drawimage(Window *window, struct image*img,int startx,int starty)
+static void drawimage(Window *window,u32 *image, u32 width, u32 height ,u32 startx,u32 starty)
 {
-    for(int x = 0;x<img->width;x++)
-        for(int y = 0;y<img->height;y++)
-            put_pixel_window(window, x+startx, y+starty, img->bytes[y*img->width+x]);
+    for(int x = 0;x<width;x++)
+        for(int y = 0;y<height;y++)
+            put_pixel_window(window, x+startx, y+starty, image[y*width+x]);
 }
 
 static void window_render(Window *window) {
@@ -947,6 +948,8 @@ static void window_full_screen(Window *window, bool full_screen) {
 static void window_destroy(Window *window) {
     if (!window)
         return;
+    if(!window->can_close)
+        return;
 
     window_restore_old_area(window);
 
@@ -974,16 +977,18 @@ static void window_destroy(Window *window) {
         }
     }
 
-    if (window->task) {
-        int module_idx = window->task->module_idx;
+    s32 module_idx;
+    if (window->task){
         kill(window->task->tid);
+        module_idx = window->task->module_idx;
         window->task = 0;
-        free(window->buffer);
-        window->buffer = 0;
-        window->buffer_size = 0;
-
-        unload_mod((u32)module_idx);
     }
+    free(window->buffer);
+    window->buffer = 0;
+    window->buffer_size = 0;
+
+    if (module_idx > 0)
+        unload_mod((u32)module_idx);
 
     changed = true;
 }
@@ -1045,13 +1050,14 @@ static void init_WM() {
     s32 old_width = 0, old_height = 0;
     s32 resize_start_x = 0, resize_start_y = 0;
     s32 old_x = 0, old_y = 0;
-    s32 last_frame = 0;
+    u32 last_frame = 0;
 
     bool dragging = false;
     bool size_changed = false;
     bool on_left = false, on_right = false, on_top = false, on_down = false;
 
     fps_last_tick = getticks();
+    dirty_rect_union(5,5,20,20);
 
     while(1){
         mouse_now = arrow_cursor;
@@ -1203,6 +1209,8 @@ static void init_WM() {
                 if (on_top) {
                     height = old_height - dy;
                     y = resize_start_y + old_height - height;
+
+                    active_window->y = y;
                     mouse_now = arrow_cursor_height;
                 }
 
@@ -1244,12 +1252,27 @@ static void init_WM() {
                 mouse_redraw_moved();
             }
 
+            last_frame = now;
+
+            char tick_text[11];
+            u32 value = fps_value;
+            u32 pos = 10;
+
+            tick_text[pos] = '\0';
+            do {
+                tick_text[--pos] = (char)('0' + value % 10);
+                value /= 10;
+            } while (value);
+
+            desktop_draw_string(&tick_text[pos], 5, 5, 0xFFFFFFFF);
+            dirty_rect_union(5, 5, 40, 16);
+
+            fps_on_present();
             present_framebuffer();
             old_mouse_x = mouse_x;
             old_mouse_y = mouse_y;
             prev_mouse_x = (s32)mouse_x;
             prev_mouse_y = (s32)mouse_y;
-            last_frame = now;
         }
 
         old_left = left;
@@ -1292,6 +1315,7 @@ INIT void init(void* _resolve_function(char* name))
     register_function("_compositor_present", compositor_present, "Draw in main framebuffer");
     register_function("_window_is_active", window_is_active, "Check active window");
     register_function("_window_resize", window_resize, "Change size window");
+    register_function("_drawimage", drawimage, "Draw image");
 
     create_task("Windows_Manager", init_WM);
 }

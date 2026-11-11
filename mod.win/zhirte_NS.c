@@ -106,6 +106,8 @@
 
 /* ===================== типы ===================== */
 
+
+
 typedef struct Line {
     char  *data;
     size_t len;

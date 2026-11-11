@@ -117,5 +117,6 @@ void init_multitask()
     tasks[0].name = "init";
     tasks[0].stack_base = 0;
     tasks[0].esp = 0;
+    tasks[0].module_idx = -1;
     current_task_idx = 0;
 }

@@ -112,6 +112,7 @@ struct module_header
     u32 version;
     u32 text_end;
     u32 end;
+    u32 icon;
 };
 
 struct mount{

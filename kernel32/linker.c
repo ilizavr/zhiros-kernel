@@ -57,6 +57,11 @@ void register_function(char *function_name, void* fnc, char *description)
 
 bool load_mod(char diskletter,char *name)
 {
+	for(int i = 0;i<256;i++)
+	{
+		if(modulelist[i].path && !strcmp(modulelist[i].path,name)) {LOGE("module %s alredy loaded",name);return false;}
+	}
+
 	struct file* mod = open(diskletter,name);
 	if(!mod){LOGE("file %s not found",name);return false;}
 	u32 size = mod->getsize(mod);

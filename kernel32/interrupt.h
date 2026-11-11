@@ -8,3 +8,4 @@
 extern void pic_remap();
 extern void init_idt();
 extern API bool hook_interrupt(u32 num, void* fnc);
+extern API void clear_interrupt_hook(u32 num);

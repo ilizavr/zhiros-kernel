@@ -27,12 +27,11 @@ void mouse_write(u8 data) {
 }
 
 u8 mouse_read() {
-    while (1) {
-        u8 status = inb(0x64);
-        if ((status & 0x21) == 0x21) {
-            return inb(0x60);
-        }
+    u8 status = inb(0x64);
+    if ((status & 0x21) == 0x21) {
+        return inb(0x60);
     }
+    return 0;
 }
 
 #define MOUSEWAIT(n) if(!mouse_wait(n)) {LOGE("mouse does not respond"); return false;}
@@ -69,6 +68,8 @@ volatile s32 mouse_y = 100;
 volatile bool mouse_left = false;
 volatile bool mouse_right = false;
 
+void * fncs[64];
+u32 curfnc = 0;
 
 static void mouse_irq_handler() {
     packet[cycle] = mouse_read();
@@ -97,6 +98,11 @@ static void mouse_irq_handler() {
         if (mouse_y < 0) mouse_y = 0;
         if (mouse_x >= 800) mouse_x = 799;
         if (mouse_y >= 600) mouse_y = 599;
+
+        if(mouse_left) for(int i = 0;i<curfnc;i++)
+        {
+            CALL(fncs[i],mouse_x,mouse_y);
+        }
     }
 }
 
@@ -120,6 +126,12 @@ static bool get_mouse_right()
     return mouse_right;
 }
 
+static bool register_click_event(void * fnc)
+{
+    if(curfnc>=63) return false;
+    fncs[curfnc++] = fnc;
+}
+
 INIT void init(void* resolver)
 {
     api_init(resolver);
@@ -130,5 +142,7 @@ INIT void init(void* resolver)
         register_function("_get_mouse_y",get_mouse_y,"_get_mouse_y() -> s32");
         register_function("_get_mouse_left",get_mouse_left,"_get_mouse_left() -> bool");
         register_function("_get_mouse_right",get_mouse_right,"_get_mouse_right() -> bool");
+
+        register_function("_register_click_event",register_click_event,"_register_click_event(function event) -> bool");
     }
 }

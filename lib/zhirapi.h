@@ -47,6 +47,7 @@ struct task* (*create_task)(char * name, void* function);
 void (*kill)(u32 tid);
 
 void (*exec_line)(char* cmd);
+u16 (*get_kernel_checksum)();
 
 static inline void api_init(void* (*_resolve_function)(char* name)) {
     if (!_resolve_function) return;
@@ -96,6 +97,7 @@ static inline void api_init(void* (*_resolve_function)(char* name)) {
     kill = _resolve_function("_kill");
 
     exec_line = _resolve_function("_exec_line");
+    get_kernel_checksum = _resolve_function("_get_kernel_checksum");
 }
 
 #endif

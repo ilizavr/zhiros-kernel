@@ -75,11 +75,12 @@ extern struct
 
 void interrupt_handler(u32 num)
 {
-	if(num == 33 && inb(0x60) == 0xE0) {pic_eoi(num-0x20); return;} //TODO убрать ебучий костыль
+	u32 portvalue = 0;
+	if(num == 33) portvalue = inb(0x60);
 
 	for(int i = 0;i<16;i++)
 		if(_interrupt_array[num].hooks[i])
-			CALL(_interrupt_array[num].hooks[i]);
+			CALL(_interrupt_array[num].hooks[i],portvalue);
 
 	if(num<32) kernel_panic(num);
 	else if(num<0x30) pic_eoi(num-0x20);
@@ -95,6 +96,7 @@ bool hook_interrupt(u32 num, void* fnc)
 		}
 	return false;
 }
+
 
 void init_idt()
 {

@@ -22,9 +22,8 @@ char kb_buffer[KB_BUF_SIZE];
 u32 kb_head = 0, kb_tail = 0;
 
 
-void keyboard_isr_handler()
+void keyboard_isr_handler(u8 key)
 {
-    u8 key = inb(0x60);
     if(key==0x2A)shift_pressed=true;
     if(key==0xAA)shift_pressed=false;
     if(key==0x36)right_shift_pressed=true;
