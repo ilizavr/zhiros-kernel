@@ -3,58 +3,69 @@
  * SPDX-License-Identifier: MIT
  */
 
-
 #include "../lib/zhirapi.h"
 #include "../lib/string.h"
 #include "../lib/ports.h"
 
-bool mouse_wait(u8 type) {
-    u32 ticks = getticks();
-    if (type == 0)
-        while ((inb(0x64) & 2))
-            if((getticks() - ticks) > 2) return false;
-    else if (type == 1)
-        while (!(inb(0x64) & 1))
-            if((getticks() - ticks) > 2) return false;
-    return true;
+void wait_input_clear() {
+    u32 timeout = 10000000;
+    while ((inb(0x64) & 0x02) && timeout--);
 }
 
-void mouse_write(u8 data) {
-    mouse_wait(0);
-    outb(0x64, 0xD4);
-    mouse_wait(0);
+void wait_output_full() {
+    u32 timeout = 10000000;
+    while (!(inb(0x64) & 0x01) && timeout--);
+}
+
+u8 mouse_read_status()
+{
+    wait_output_full();
+    return inb(0x64);
+}
+
+void mouse_send_cmd(u8 cmd)
+{
+    wait_input_clear();
+    outb(0x64, cmd);
+}
+
+void mouse_send_data(u8 data) {
+    mouse_send_cmd(0xD4);
+    wait_input_clear();
     outb(0x60, data);
 }
 
-u8 mouse_read() {
-    u8 status = inb(0x64);
-    if ((status & 0x21) == 0x21) {
-        return inb(0x60);
+u8 mouse_read_data() {
+    while (true){
+        if (mouse_read_status() & 0x20) {
+            wait_output_full();
+            return inb(0x60);
+        }
+        (void)inb(0x60);
     }
+
     return 0;
 }
 
-#define MOUSEWAIT(n) if(!mouse_wait(n)) {LOGE("mouse does not respond"); return false;}
-
 bool init_mouse() {
     //enable mouse
-    MOUSEWAIT(1)
-    outb(0x64, 0xA8);
+    mouse_send_cmd(0xA8);
 
     //enable interrupt
-    MOUSEWAIT(1)
-    outb(0x64, 0x20);
-    MOUSEWAIT(0)
-    u8 status = inb(0x60);
+    mouse_send_cmd(0x20);
+    wait_output_full();//зависает на qemu
+    u8 config = inb(0x60);
 
-    MOUSEWAIT(1)
-    outb(0x64, 0x60);
-    MOUSEWAIT(1)
-    outb(0x60, status | 2); //IRQ12 flag
+    config |= 0x02; //IRQ12
+    config &= ~0x20; //enable mouse
+
+    mouse_send_cmd(0x60);
+    wait_input_clear();
+    outb(0x60, config);
 
     //enable packet
-    mouse_write(0xF4);
-    mouse_read();
+    mouse_send_data(0xF4);
+    mouse_read_data();
 
     LOGI("mouse inited");
     return true;
@@ -66,13 +77,14 @@ volatile u8 packet[3];
 volatile s32 mouse_x = 100;
 volatile s32 mouse_y = 100;
 volatile bool mouse_left = false;
+volatile bool mouse_left_old = false;
 volatile bool mouse_right = false;
 
 void * fncs[64];
 u32 curfnc = 0;
 
 static void mouse_irq_handler() {
-    packet[cycle] = mouse_read();
+    packet[cycle] = mouse_read_data();
 
     // allign check
     if (cycle == 0 && !(packet[cycle] & 0x08)) return;
@@ -99,10 +111,11 @@ static void mouse_irq_handler() {
         if (mouse_x >= 800) mouse_x = 799;
         if (mouse_y >= 600) mouse_y = 599;
 
-        if(mouse_left) for(int i = 0;i<curfnc;i++)
+        if(mouse_left && !mouse_left_old) for(int i = 0;i<curfnc;i++)
         {
             CALL(fncs[i],mouse_x,mouse_y);
         }
+        mouse_left_old = mouse_left;
     }
 }
 

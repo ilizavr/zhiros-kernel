@@ -297,9 +297,12 @@ static u32 parse_octal(const char *str, size_t size) {
     return val;
 }
 
-static u32 icons[64*64*64];
-static char names[64*64];
+static u32 icons[64*64*64] = {0};
+static char names[64*64] = {0};
+static u32 lastclicktime[64] = {0};
 static u32 cur_header_idx = 0;
+static u32 select_idx = -1;
+static bool select_is_red = false;
 
 static void parce_ramdisk()
 {
@@ -407,7 +410,10 @@ static void draw_string_program() {
 
         display_name[display_len] = '\0';
 
-        draw_string(Programs, display_name, row + (WIDTH_PROG / 2 - text_width / 2), col, 0xFF000000);
+        if(select_idx == i && select_is_red) draw_string(Programs, display_name, row + (WIDTH_PROG / 2 - text_width / 2), col, 0xFFFFAA00);
+        else if(select_idx == i) draw_string(Programs, display_name, row + (WIDTH_PROG / 2 - text_width / 2), col, 0xFF000055);
+        else draw_string(Programs, display_name, row + (WIDTH_PROG / 2 - text_width / 2), col, 0xFF000000);
+
         draw_icon_program(&icons[64*64*i]);
         row += WIDTH_PROG;
     }
@@ -454,15 +460,21 @@ static void on_click(s32 x, s32 y)
     x -= Programs->x;
     y -= Programs->y;
 
-    //printf("%u %u %u\n",x,y,program_index_at(x,y));
-
     int idx = program_index_at(x,y);
+    select_idx = idx;
+    select_is_red = false;
     if(idx<0)return;
-    char* path = &names[64*idx];
 
-    if(strstr(path, ".mod"))load_mod('A',path);
-    else if(strstr(path, ".elf"))APICALL("_elfload",'A',path);
-    else if(strstr(path, ".zi")){path[strlen(path)-1] = 0; APICALL("_img",'A',path); path[strlen(path)] = 'i';}
+    if((lastclicktime[idx]+500) > getticks()){
+        char* path = &names[64*idx];
+        if(strstr(path, ".mod"))load_mod('A',path);
+        else if(strstr(path, ".elf"))APICALL("_elfload",'A',path);
+        else if(strstr(path, ".zi")){path[strlen(path)-1] = 0; APICALL("_img",'A',path); path[strlen(path)] = 'i';}
+
+        select_is_red = true;
+    }
+
+    lastclicktime[idx] = getticks();
 }
 
 static void program_manager() {

@@ -74,6 +74,8 @@ static struct object * fetch(struct objectArray* args)
 
     print_color("                 OS: ",0xFFA500);
     printf("ZHIROS");
+    print_color("\n                 Kernel: ",0xFFA500);
+    printf("ZHIR-KERNEL(%x)", get_kernel_checksum());
     print_color("\n                 CPU: ",0xFFA500);
     printf("%s",buffer);
     print_color("\n                 Display: ",0xFFA500);
@@ -85,7 +87,7 @@ static struct object * fetch(struct objectArray* args)
     print_color("\n                 Memory allocated: ",0xFFA500);
     printf("%Z/%Z\n",getused()>>10,(getused()+getfree())>>10);
 
-    int i = 5;
+    int i = 6;
     for( ; i <= logo_img->height/fb->font_height ; i++) printf("\n");
 
     free(fb);
@@ -229,10 +231,19 @@ static void printfile(char diskletter, char* name)
 static struct object* ps(struct objectArray* args)
 {
     struct task* tasks = get_tasks();
-    printf("TID  NAME\n");
+    printf("TID  TASK               MODULE\n");
     for(int i = 0;i<MAX_TASKS;i++)
     {
-        if(tasks[i].tid!=0) printf("%u    %s\n",tasks[i].tid,tasks[i].name);
+        if(tasks[i].tid==0) continue;
+        printf("%u    %s",tasks[i].tid,tasks[i].name);
+        for(int j = strlen(tasks[i].name);j<19;j++)printf(" ");
+
+        if(tasks[i].module_idx == -1){
+            printf("kernel\n");
+            continue;
+        }
+        struct module_info* mdls = get_module_array();
+        printf("%s\n",mdls[tasks[i].module_idx].path);
     }
     return NULL;
 }
