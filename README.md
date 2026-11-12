@@ -49,10 +49,9 @@
 - unixbox(слой совместимости для unix-подобных программ) - в планах
 
 ## набор модулей нейрослоп:
-- macwm - оконный менеджер в стиле макос(claude code opus 5.5)
-- zhirte_ns - улучшенный редактор кода(glm 5.3 flash)
 - doom port(claude code opus 5.5)
-- cli_NS - история команд в терминале
+- cli_NS - история команд в терминале(gemini 3.8 flash)
+- ide disk driver(glm 5.3 flash)
 
 ## нейросети и вайбкодинг
 - в ядре не должно быть ни строчки кода написанного ИИ.
@@ -60,12 +59,10 @@
 - в первое время модули пишем с помощью нейросетей, как технический долг. в будущем все основные модули будут без нейросетевого кода
 - написание тестов и review кода с помощью нейросетей РАЗРЕШЕНО
 
-## screenshotы без нейрослопа
+## screenshotы
 <img width="827" height="354" alt="изображение" src="https://github.com/user-attachments/assets/ca0ed1a9-ed53-4710-bfc9-f7ae495c750e" />
 <img width="1196" height="893" alt="изображение" src="https://github.com/user-attachments/assets/51ffa2a4-c8db-44c4-b37f-0022ba50dc16" />
 <img width="1203" height="890" alt="изображение" src="https://github.com/user-attachments/assets/42948e00-4651-470e-b5c1-04123fd61106" />
 <img width="1190" height="896" alt="изображение" src="https://github.com/user-attachments/assets/4431c754-628c-413f-bc3a-c005f7daaa8c" />
 <img width="1196" height="898" alt="изображение" src="https://github.com/user-attachments/assets/5cc7b05b-8be2-4b32-af93-5a10f3b1d2a1" />
-
-## с нейрослопом
-<img width="1197" height="893" alt="изображение" src="https://github.com/user-attachments/assets/2ec00d0d-3245-476b-b280-0550e30d9a8f" />
+<img width="1280" height="800" alt="изображение" src="https://github.com/user-attachments/assets/817d19dd-bdfa-4515-ac92-4380109c4a82" />
