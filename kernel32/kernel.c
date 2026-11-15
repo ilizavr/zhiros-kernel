@@ -146,6 +146,7 @@ void main(i_ptr addr, u32 magic)
     register_function("_get_key_state_matrix",get_key_state_matrix,"_get_key_state_matrix() -> bool key_state_matrix[256]");
     register_function("_print_color",print_color,"_print_color(char *string, u32 color) -> None");
     register_function("_putchar_color",putchar_color,"_putchar_color(char chr, u32 color) -> None");
+    register_function("_put_icon",put_icon,"_put_icon(u32* icon16x16) -> None");
     register_function("_alloc",kalloc,"_alloc(u32 size) -> void* buf");
     register_function("_free",free,"_free(void* buf) -> bool success");
     register_function("_getfree",get_available_memory,"_getfree() -> i_ptr freemem");

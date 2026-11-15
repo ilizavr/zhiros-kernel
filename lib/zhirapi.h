@@ -6,6 +6,7 @@
 void (*print_color)(char *string, u32 color);
 void (*printf)(...);
 void (*putchar_color)(char chr, u32 color);
+void (*put_icon)(u32* icon);
 void (*clearframe)();
 struct fb_info* (*fbcon_stop)();
 struct fb_info* (*getfb)();

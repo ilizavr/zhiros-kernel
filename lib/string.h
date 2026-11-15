@@ -350,4 +350,10 @@ static u16 crc16(const u8* data, u16 len)
     return crc;
 }
 
+#ifdef STRDUP
+static char* strdup(char*str){
+    char* ret = alloc(strlen(str));
+    strcpy(ret,str);
+}
+#endif
 #endif

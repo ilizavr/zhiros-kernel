@@ -18,6 +18,7 @@ void (*compositor_present)();
 bool (*window_is_active)(Window *window);
 void (*desktop_fill_rect)(s32 x, s32 y, s32 width, s32 height, u32 color);
 void (*desktop_draw_string)(const char *text, u32 x, u32 y, u32 color);
+void (*drawimage)(Window *window, u32 *image, u32 width, u32 height, u32 start_x, u32 start_y);
 
 const u32 icon[64*64] = {
     0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000,
@@ -121,6 +122,12 @@ void roll_screen()
 {
     memcpy((char*)fb_addr,(char*)fb_secondline_addr,fb_size_withoutlastline);
     memset((char*)fb_lastline_addr,0,fb_onelinesize);
+}
+static void put_icon_hook(u32* icon)
+{
+    if(!terminal_window) return;
+    drawimage(terminal_window,icon,16,16,curx,cury);
+    curx+=16;
 }
 
 static void putchar_color_hook(char chr, u32 color)
@@ -232,6 +239,7 @@ static void terminal_thread() {
     clearframe_hook();
 
     replace_function("_putchar_color",putchar_color_hook);
+    replace_function("_put_icon",put_icon_hook);
     replace_function("_clearframe",clearframe_hook);
     replace_function("_getfb",getfb_hook);
     replace_function("_getchar",getchar_hook);
@@ -264,6 +272,7 @@ INIT void init(void* _resolve_function(char* name))
     window_is_active = _resolve_function("_window_is_active");
     desktop_fill_rect = _resolve_function("_desktop_fill_rect");
     desktop_draw_string = _resolve_function("_desktop_draw_string");
+    drawimage = _resolve_function("_drawimage");
 
     hook_interrupt(33, keyboard_isr_handler);
 

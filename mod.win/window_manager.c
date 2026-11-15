@@ -660,7 +660,7 @@ static void mouse_redraw_moved() {
 static void draw_icons_window(Window *window) {
     s32 icon_pos = window->width - 70;
 
-    for (u32 dy = 0; dy < 5; dy++) {
+    if (window->can_close) for (u32 dy = 0; dy < 5; dy++) {
         for (u32 dx = 0; dx < 5; dx++) {
             if (!window_icon_1[dy][dx])
                 continue;
@@ -684,7 +684,7 @@ static void draw_icons_window(Window *window) {
         }
     }
 
-    for (u32 dy = 0; dy < 10; dy++) {
+    if (!window->window_on_changed) for (u32 dy = 0; dy < 10; dy++) {
         for (u32 dx = 0; dx < 8; dx++) {
             if (!window_icon_3[dy][dx])
                 continue;

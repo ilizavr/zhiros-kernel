@@ -145,6 +145,34 @@ void putchar_color(char chr, u32 color)
     curx+=char_w;
 }
 
+void put_icon(u32* icon)
+{
+    if(stopcon) return;
+
+    u32 char_h = 9 * fb_scale /2;
+    {
+        cury+=char_h;
+
+        if((cury+char_h)>screen_height) {
+            roll_screen();
+            cury = screen_height-char_h;
+        }
+
+        cury+=char_h;
+
+        if((cury+char_h)>screen_height) {
+            roll_screen();
+            cury = screen_height-char_h;
+        }
+    }
+    cury-=char_h*2;
+
+    for(int x = 0;x<16;x++)
+        for (int y = 0;y<16;y++)
+            put_pixel(curx+x,cury+y,icon[x+y*16]);
+    curx+=16;
+}
+
 O0 void print_color(char *str, u32 color)
 {
     int len = strlen(str);

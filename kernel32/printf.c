@@ -9,7 +9,7 @@
 
 volatile u32 printfcolor = 0xAAAAAA;
 
-void printf(char *fmt, ...)
+O0 void printf(char *fmt, ...)
 {
     va_list args;
     va_start(args,fmt);
@@ -69,6 +69,11 @@ void printf(char *fmt, ...)
                 print_int(num,printfcolor);
                 putchar_color('k',printfcolor);
 
+                break;
+            }
+            case 'I':{
+                u32 *icon = va_arg(args, u32*);
+                put_icon(icon);
                 break;
             }
             case '%':{
